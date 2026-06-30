@@ -4822,12 +4822,6 @@ async def contact_command(interaction: discord.Interaction):
             1521523276315099309,
         ]
 
-        WARN_DM_ROLES = [
-            1521498188148768809,
-            1521523168659898573,
-            1521523237383835718,
-        ]
-
         def get_members_for_role(role_id):
             role = guild.get_role(role_id)
             if not role:
@@ -4836,13 +4830,11 @@ async def contact_command(interaction: discord.Interaction):
 
         important_lines = [
             "**Respectez notre équipe !**",
-            f"Avant de contacter un membre en direct, ouvrez d'abord un ticket pour obtenir une réponse plus rapide.",
+            "Avant de contacter un membre en direct, ouvrez d'abord un ticket pour obtenir une réponse plus rapide.",
+            "• Il est fortement déconseillé de tenter de MP <@&1521498188148768809>.",
+            "• Les membres de la Gérance (<@&1521523168659898573> et <@&1521523237383835718>) ne doivent pas être MP directement.",
+            "• Privilégiez toujours le système des tickets.",
         ]
-        for rid in WARN_DM_ROLES:
-            role = guild.get_role(rid)
-            if role:
-                important_lines.append(f"• Il est fortement déconseillé de tenter de MP <@&{rid}>.")
-        important_lines.append("• Privilégiez toujours le système des tickets.")
 
         important_block = "\n".join(important_lines)
 
@@ -4864,11 +4856,12 @@ async def contact_command(interaction: discord.Interaction):
         equipe_block = "\n".join(equipe_lines)
 
         description = (
+            "# 🎲 GUIDE DES CONTACTS\n"
             "> Besoin d'aide ? Voici qui contacter selon votre demande.\n"
             "> Consultez les sections ci-dessous pour trouver le bon interlocuteur.\n\n"
-            f"🔰 **IMPORTANT**\n"
+            "# 🔰 IMPORTANT\n"
             f"{important_block}\n\n"
-            f"👥 **ÉQUIPE DISPONIBLE**\n\n"
+            "# 👥 ÉQUIPE DISPONIBLE\n\n"
             f"{equipe_block}\n"
             f"🔒 **Sujet sensible ou situation délicate ?**\n"
             f"Ouvrez un ticket via le système de tickets.\n"
@@ -4876,7 +4869,6 @@ async def contact_command(interaction: discord.Interaction):
         )
 
         embed = discord.Embed(
-            title="🎲 GUIDE DES CONTACTS",
             description=description,
             color=0x000000,
         )
