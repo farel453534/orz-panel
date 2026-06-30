@@ -852,6 +852,24 @@ class NexusBot(discord.Client):
                     logger.error(f"Failed to ban blacklisted user {member}: {e}")
                 return
 
+            try:
+                ch_id = await get_guild_setting(member.guild.id, 'welcome_channel_id')
+                if ch_id:
+                    welcome_ch = member.guild.get_channel(int(ch_id))
+                    if welcome_ch:
+                        embed = discord.Embed(
+                            title="👋 Bienvenue sur Orizon・Poudlard",
+                            description=(
+                                "Pense à lire les <#1521534040023498832> "
+                                "et à consulter <#1329139821524029521> pour bien commencer !"
+                            ),
+                            color=0x000000,
+                        )
+                        embed.set_thumbnail(url=member.display_avatar.url)
+                        await welcome_ch.send(embed=embed)
+            except Exception as e:
+                logger.error(f"Failed to send welcome message for {member}: {e}")
+
         if member.bot:
             guild = member.guild
             enabled = await is_protection_enabled(guild.id, "anti_bot_add")
@@ -4878,6 +4896,88 @@ async def contact_command(interaction: discord.Interaction):
         await log_to_db('info', f'/contact used by {interaction.user} in #{interaction.channel}')
     except Exception as e:
         logger.error(f"Error in /contact command: {traceback.format_exc()}")
+        try:
+            await interaction.followup.send("❌ Une erreur est survenue.", ephemeral=True)
+        except Exception:
+            pass
+
+
+@bot.tree.command(name="info", description="Envoyer le panel d'informations et des serveurs dans ce salon.")
+@app_commands.default_permissions(administrator=True)
+async def info_command(interaction: discord.Interaction):
+    try:
+        if interaction.guild is None:
+            await interaction.response.send_message("❌ Cette commande doit être utilisée sur un serveur.", ephemeral=True)
+            return
+
+        await interaction.response.defer(ephemeral=True)
+
+        now = datetime.datetime.utcnow().strftime("%d/%m/%Y %H:%M UTC")
+
+        description = (
+            "# ⚙️ NOS SERVEURS DISCORD\n"
+            "> Retrouvez l'ensemble de nos serveurs et liens clés.\n\n"
+
+            "🌐 **SERVEURS DISCORDS GLOBAL**\n"
+            "• [PoudlardRP](https://discord.gg/GbUYFXKuTn) • Serveur principal\n\n"
+
+            "🎓 **SERVEURS MAISONS**\n"
+            "• Serpentard\n"
+            "• Gryffondor\n"
+            "• Serdaigle\n"
+            "• Poufsouffle\n\n"
+
+            "🌍 **SERVEURS MONDE**\n"
+            "• Monde Magique\n"
+            "• Mage Indépendant\n\n"
+
+            "🔗 **LIENS IMPORTANTS**\n"
+            "• 🌐 **Portail Orizon Community** • Site internet\n"
+            "• 💸 **Boutique** • Achats & soutiens\n"
+            "• 📖 **Wiki PoudlardRP** • Documentation\n"
+            "• 📋 **Règlement serveur (doc)** • Règles et procédures\n\n"
+
+            "⚠️ **PRÉVENTION**\n"
+            "• ⚠️ Les Discords joueurs ne sont pas affiliés à Orizon Poudlard.\n"
+            "• ⚠️ Toute création de Discord sans autorisation peut entraîner des sanctions.\n\n"
+
+            f"-# Orizon Poudlard • Liens Serveur | {now}"
+        )
+
+        embed = discord.Embed(
+            description=description,
+            color=0x000000,
+        )
+
+        await interaction.channel.send(embed=embed)
+        await interaction.followup.send("✅ Panel d'informations envoyé.", ephemeral=True)
+        await log_to_db('info', f'/info used by {interaction.user} in #{interaction.channel}')
+    except Exception as e:
+        logger.error(f"Error in /info command: {traceback.format_exc()}")
+        try:
+            await interaction.followup.send("❌ Une erreur est survenue.", ephemeral=True)
+        except Exception:
+            pass
+
+
+@bot.tree.command(name="reception", description="Configurer ce salon comme salon de bienvenue automatique.")
+@app_commands.default_permissions(administrator=True)
+async def reception_command(interaction: discord.Interaction):
+    try:
+        if interaction.guild is None:
+            await interaction.response.send_message("❌ Cette commande doit être utilisée sur un serveur.", ephemeral=True)
+            return
+
+        await interaction.response.defer(ephemeral=True)
+        await set_guild_setting(interaction.guild.id, 'welcome_channel_id', interaction.channel.id)
+        await interaction.followup.send(
+            f"✅ Salon de bienvenue configuré : {interaction.channel.mention}\n"
+            "Le bot enverra automatiquement le message de bienvenue à chaque nouveau membre.",
+            ephemeral=True
+        )
+        await log_to_db('info', f'/reception configured by {interaction.user} -> #{interaction.channel}')
+    except Exception as e:
+        logger.error(f"Error in /reception command: {traceback.format_exc()}")
         try:
             await interaction.followup.send("❌ Une erreur est survenue.", ephemeral=True)
         except Exception:
