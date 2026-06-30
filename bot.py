@@ -288,12 +288,12 @@ def build_help_embed(command_ids=None):
     description += "\n".join(text_lines)
 
     embed = discord.Embed(
-        title="MssClick - Panel",
+        title="Orizon - Panel",
         description=description,
         color=0x2b2d31
     )
 
-    embed.set_footer(text="© MssClick Panel")
+    embed.set_footer(text="© Orizon Panel")
 
     return embed
 
@@ -3954,9 +3954,9 @@ async def ticketslogs_command(interaction: discord.Interaction):
             if role.permissions.administrator and role != guild.default_role:
                 overwrites[role] = discord.PermissionOverwrite(view_channel=True, read_message_history=True, send_messages=False)
 
-        category = discord.utils.get(guild.categories, name="MssClick - Logs")
+        category = discord.utils.get(guild.categories, name="Orizon - Logs")
         if not category:
-            category = await guild.create_category("MssClick - Logs", overwrites=overwrites)
+            category = await guild.create_category("Orizon - Logs", overwrites=overwrites)
             try:
                 await category.edit(position=len(guild.categories))
             except Exception:
@@ -4157,7 +4157,7 @@ class TicketPanelLayout(discord.ui.LayoutView):
 
         container.add_item(discord.ui.Separator())
         container.add_item(discord.ui.TextDisplay(
-            "-# MssClick • Poudlard | Tickets"
+            "-# Orizon • Poudlard | Tickets"
         ))
 
         self.add_item(container)
