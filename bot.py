@@ -1970,12 +1970,12 @@ async def get_general_log_channel(guild):
     return await get_log_channel(guild, "server")
 
 
-async def send_audit_log(guild, category_key, title, description, color=0x2b2d31, thumbnail_url=None):
+async def send_audit_log(guild, category_key, title, description, color=0x000000, thumbnail_url=None):
     try:
         log_ch = await get_log_channel(guild, category_key)
         if not log_ch:
             return
-        embed = discord.Embed(title=title, description=description, color=color)
+        embed = discord.Embed(title=title, description=description, color=0x000000)
         embed.timestamp = datetime.datetime.utcnow()
         if thumbnail_url:
             embed.set_thumbnail(url=thumbnail_url)
@@ -2015,7 +2015,7 @@ async def send_protection_log(guild, protection_key, user, detail_text, role=Non
 
         description = "\n".join(mention_lines) + "\n```diff\n" + "\n".join(code_lines) + "\n```"
 
-        embed = discord.Embed(description=description, color=0x2b2d31)
+        embed = discord.Embed(description=description, color=0x000000)
         embed.timestamp = datetime.datetime.utcnow()
         await channel.send(embed=embed)
     except Exception as e:
@@ -3871,6 +3871,16 @@ async def logs_command(interaction: discord.Interaction):
             if role.permissions.administrator and role != guild.default_role:
                 overwrites[role] = discord.PermissionOverwrite(view_channel=True, read_message_history=True, send_messages=False)
 
+        view_only_role = guild.get_role(1521524197942231141)
+        if view_only_role:
+            overwrites[view_only_role] = discord.PermissionOverwrite(
+                view_channel=True,
+                read_message_history=True,
+                send_messages=False,
+                manage_messages=False,
+                manage_channels=False,
+            )
+
         category = discord.utils.get(guild.categories, name="Logs - Général")
         if not category:
             category = await guild.create_category("Logs - Général", overwrites=overwrites)
@@ -3953,6 +3963,16 @@ async def ticketslogs_command(interaction: discord.Interaction):
         for role in guild.roles:
             if role.permissions.administrator and role != guild.default_role:
                 overwrites[role] = discord.PermissionOverwrite(view_channel=True, read_message_history=True, send_messages=False)
+
+        view_only_role = guild.get_role(1521524197942231141)
+        if view_only_role:
+            overwrites[view_only_role] = discord.PermissionOverwrite(
+                view_channel=True,
+                read_message_history=True,
+                send_messages=False,
+                manage_messages=False,
+                manage_channels=False,
+            )
 
         category = discord.utils.get(guild.categories, name="Orizon - Logs")
         if not category:
@@ -4779,6 +4799,95 @@ async def ticket_command(interaction: discord.Interaction):
         try:
             if not interaction.response.is_done():
                 await interaction.response.send_message("❌ Une erreur est survenue.", ephemeral=True)
+        except Exception:
+            pass
+
+
+@bot.tree.command(name="contact", description="Envoyer le guide des contacts du serveur dans ce salon.")
+@app_commands.default_permissions(administrator=True)
+async def contact_command(interaction: discord.Interaction):
+    try:
+        if interaction.guild is None:
+            await interaction.response.send_message("❌ Cette commande doit être utilisée sur un serveur.", ephemeral=True)
+            return
+
+        await interaction.response.defer(ephemeral=True)
+        guild = interaction.guild
+
+        CONTACT_ROLES = [
+            1521498188148768809,
+            1521523197764305130,
+            1521523168659898573,
+            1521523237383835718,
+            1521523276315099309,
+        ]
+
+        WARN_DM_ROLES = [
+            1521498188148768809,
+            1521523168659898573,
+            1521523237383835718,
+        ]
+
+        def get_members_for_role(role_id):
+            role = guild.get_role(role_id)
+            if not role:
+                return []
+            return [m for m in role.members if not m.bot]
+
+        important_lines = [
+            "**Respectez notre équipe !**",
+            f"Avant de contacter un membre en direct, ouvrez d'abord un ticket pour obtenir une réponse plus rapide.",
+        ]
+        for rid in WARN_DM_ROLES:
+            role = guild.get_role(rid)
+            if role:
+                important_lines.append(f"• Il est fortement déconseillé de tenter de MP <@&{rid}>.")
+        important_lines.append("• Privilégiez toujours le système des tickets.")
+
+        important_block = "\n".join(important_lines)
+
+        sep = "─" * 40
+
+        equipe_lines = []
+        for role_id in CONTACT_ROLES:
+            role = guild.get_role(role_id)
+            role_mention = f"<@&{role_id}>" if role else f"`Rôle inconnu ({role_id})`"
+            members = get_members_for_role(role_id)
+            equipe_lines.append(f"**–** {role_mention}")
+            if members:
+                for m in members:
+                    equipe_lines.append(f"• {m.mention}")
+            else:
+                equipe_lines.append("• *Aucun membre disponible*")
+            equipe_lines.append(sep)
+
+        equipe_block = "\n".join(equipe_lines)
+
+        description = (
+            "> Besoin d'aide ? Voici qui contacter selon votre demande.\n"
+            "> Consultez les sections ci-dessous pour trouver le bon interlocuteur.\n\n"
+            f"🔰 **IMPORTANT**\n"
+            f"{important_block}\n\n"
+            f"👥 **ÉQUIPE DISPONIBLE**\n\n"
+            f"{equipe_block}\n"
+            f"🔒 **Sujet sensible ou situation délicate ?**\n"
+            f"Ouvrez un ticket via le système de tickets.\n"
+            f"→ *Entretien avec la Direction*"
+        )
+
+        embed = discord.Embed(
+            title="🎲 GUIDE DES CONTACTS",
+            description=description,
+            color=0x000000,
+        )
+
+        await interaction.channel.send(embed=embed)
+        await interaction.followup.send("✅ Guide des contacts envoyé.", ephemeral=True)
+        await log_to_db('info', f'/contact used by {interaction.user} in #{interaction.channel}')
+    except Exception as e:
+        logger.error(f"Error in /contact command: {traceback.format_exc()}")
+        try:
+            await interaction.followup.send("❌ Une erreur est survenue.", ephemeral=True)
         except Exception:
             pass
 
