@@ -856,6 +856,11 @@ class NexusBot(discord.Client):
                 ch_id = await get_guild_setting(member.guild.id, 'welcome_channel_id')
                 if ch_id:
                     welcome_ch = member.guild.get_channel(int(ch_id))
+                    if welcome_ch is None:
+                        try:
+                            welcome_ch = await member.guild.fetch_channel(int(ch_id))
+                        except Exception:
+                            welcome_ch = None
                     if welcome_ch:
                         embed = discord.Embed(
                             title="👋 Bienvenue sur Orizon・Poudlard",
@@ -867,6 +872,7 @@ class NexusBot(discord.Client):
                         )
                         embed.set_thumbnail(url=member.display_avatar.url)
                         await welcome_ch.send(embed=embed)
+                        logger.info(f"Welcome embed sent for {member} in #{welcome_ch.name}")
             except Exception as e:
                 logger.error(f"Failed to send welcome message for {member}: {e}")
 
