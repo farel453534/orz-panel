@@ -899,13 +899,15 @@ class NexusBot(discord.Client):
                             embed = discord.Embed(
                                 title="👋 Bienvenue sur Orizon・Poudlard",
                                 description=(
-                                    "Pense à lire les <#1521534041386516631> "
-                                    "et à consulter <#1329139821524029521> pour bien commencer !"
+                                    "Pense à lire les <#1521534040023498832> "
+                                    "et à consulter <#1521534041386516631> pour bien commencer !"
                                 ),
-                                color=0x808080,
+                                color=0x2b2d31,
                             )
                             embed.set_thumbnail(url=member.display_avatar.url)
-                            await welcome_ch.send(embed=embed)
+                            embed.set_image(url="attachment://bienvenue_cropped.png")
+                            banner_file = discord.File("attached_assets/bienvenue_cropped.png", filename="bienvenue_cropped.png")
+                            await welcome_ch.send(file=banner_file, embed=embed)
                             logger.info(f"Welcome embed sent for {member} in #{welcome_ch.name}")
                         except discord.Forbidden:
                             logger.error(f"Permission manquante pour envoyer dans #{welcome_ch.name} ({member.guild.name}) — vérifie que le bot a 'Envoyer des messages' et 'Intégrer des liens'")
@@ -1460,6 +1462,50 @@ class NexusBot(discord.Client):
                         await send_protection_log(message.guild, "anti_link", user, f"{user} a envoyé un lien.")
                         await log_to_db('warn', f'Link blocked: {user} in {message.guild.name}')
                         return
+
+            # --- Anti lien Discord (discord.gg / discord.com/invite) ---
+            discord_invite_pattern = re.compile(
+                r'(discord\.gg/|discord\.com/invite/|discordapp\.com/invite/)([a-zA-Z0-9-]+)',
+                re.IGNORECASE
+            )
+            invite_match = discord_invite_pattern.search(message.content)
+            if invite_match:
+                member_obj = message.guild.get_member(user.id)
+                is_admin = member_obj and member_obj.guild_permissions.administrator
+                is_owner = user.id == BOT_OWNER_ID or user.id == message.guild.owner_id
+                is_wl = await is_whitelisted(message.guild, user.id)
+                is_ol = await is_owner_or_ownerlist(message.guild, user.id)
+
+                if not (is_admin or is_owner or is_wl or is_ol):
+                    invite_code = invite_match.group(2)
+
+                    # Supprimer le message original
+                    try:
+                        await message.delete()
+                    except Exception:
+                        pass
+
+                    # Remplacer le lien par des caractères barrés dans le chat (pas d'embed)
+                    raw_link = f"discord.gg/{invite_code}"
+                    struck = "".join(c + "\u0336" for c in raw_link)
+                    censored_content = message.content
+                    censored_content = discord_invite_pattern.sub(struck, censored_content)
+
+                    try:
+                        await message.channel.send(f"{user.mention}: {censored_content}")
+                    except Exception:
+                        pass
+
+                    # Kick silencieux
+                    if member_obj:
+                        try:
+                            await message.guild.kick(member_obj, reason="Shield Protection: lien Discord interdit")
+                        except Exception as e:
+                            logger.error(f"Failed to kick {user} for Discord invite: {e}")
+
+                    await send_protection_log(message.guild, "anti_discord_link", user, f"{user} a envoyé un lien Discord invite.")
+                    await log_to_db('warn', f'Discord invite blocked: {user} sent discord.gg/{invite_code} in {message.guild.name}')
+                    return
 
             if len(message.mentions) >= 5:
                 enabled = await is_protection_enabled(message.guild.id, "anti_mass_mention")
@@ -2039,7 +2085,7 @@ async def send_audit_log(guild, category_key, title, description, color=0x000000
         log_ch = await get_log_channel(guild, category_key)
         if not log_ch:
             return
-        embed = discord.Embed(title=title, description=description, color=0x000000)
+        embed = discord.Embed(title=title, description=description, color=0x2b2d31)
         embed.timestamp = datetime.datetime.utcnow()
         if thumbnail_url:
             embed.set_thumbnail(url=thumbnail_url)
@@ -2079,7 +2125,7 @@ async def send_protection_log(guild, protection_key, user, detail_text, role=Non
 
         description = "\n".join(mention_lines) + "\n```diff\n" + "\n".join(code_lines) + "\n```"
 
-        embed = discord.Embed(description=description, color=0x000000)
+        embed = discord.Embed(description=description, color=0x2b2d31)
         embed.timestamp = datetime.datetime.utcnow()
         await channel.send(embed=embed)
     except Exception as e:
