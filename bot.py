@@ -899,10 +899,10 @@ class NexusBot(discord.Client):
                             embed = discord.Embed(
                                 title="👋 Bienvenue sur Orizon・Poudlard",
                                 description=(
-                                    "Pense à lire les <#1521534040023498832> "
+                                    "Pense à lire les <#1521534041386516631> "
                                     "et à consulter <#1329139821524029521> pour bien commencer !"
                                 ),
-                                color=0x000000,
+                                color=0x808080,
                             )
                             embed.set_thumbnail(url=member.display_avatar.url)
                             await welcome_ch.send(embed=embed)
