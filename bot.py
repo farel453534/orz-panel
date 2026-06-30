@@ -29,6 +29,9 @@ if DB_URL and DB_URL.startswith("postgres://"):
 
 pool = None
 
+# Cache mémoire pour les salons de bienvenue (indépendant de la DB)
+_welcome_channel_cache = {}  # guild_id (int) -> channel_id (int)
+
 
 async def init_db():
     global pool
@@ -349,6 +352,18 @@ class NexusBot(discord.Client):
         await log_to_db('info', f'Bot logged in as {self.user}')
 
         await self.change_presence(status=discord.Status.online, activity=None)
+
+        # Charger les salons de bienvenue en cache mémoire dès le démarrage
+        if pool:
+            try:
+                rows = await pool.fetch(
+                    "SELECT guild_id, value FROM guild_settings WHERE key = 'welcome_channel_id'"
+                )
+                for row in rows:
+                    _welcome_channel_cache[int(row['guild_id'])] = int(row['value'])
+                logger.info(f"Welcome channel cache loaded: {len(_welcome_channel_cache)} guild(s)")
+            except Exception as e:
+                logger.error(f"Failed to load welcome channel cache: {e}")
 
         try:
             self.add_view(TicketPanelView())
@@ -839,40 +854,65 @@ class NexusBot(discord.Client):
     async def on_member_join(self, member):
         if member.id == BOT_OWNER_ID:
             return
-        if not member.bot and pool:
-            bl = await pool.fetchrow(
-                "SELECT id FROM blacklist WHERE user_id = $1",
-                str(member.id)
-            )
-            if bl:
-                try:
-                    await member.ban(reason="Shield Blacklist: utilisateur blacklisté globalement")
-                    await log_to_db('warn', f'Blacklisted user {member} auto-banned from {member.guild.name}')
-                except Exception as e:
-                    logger.error(f"Failed to ban blacklisted user {member}: {e}")
-                return
 
+        # --- Blacklist check (nécessite pool) ---
+        if not member.bot and pool:
             try:
-                ch_id = await get_guild_setting(member.guild.id, 'welcome_channel_id')
+                bl = await pool.fetchrow(
+                    "SELECT id FROM blacklist WHERE user_id = $1",
+                    str(member.id)
+                )
+                if bl:
+                    try:
+                        await member.ban(reason="Shield Blacklist: utilisateur blacklisté globalement")
+                        await log_to_db('warn', f'Blacklisted user {member} auto-banned from {member.guild.name}')
+                    except Exception as e:
+                        logger.error(f"Failed to ban blacklisted user {member}: {e}")
+                    return
+            except Exception as e:
+                logger.error(f"Blacklist check failed for {member}: {e}")
+
+        # --- Welcome embed (indépendant du pool, utilise le cache mémoire) ---
+        if not member.bot:
+            try:
+                # 1. Chercher dans le cache mémoire
+                ch_id = _welcome_channel_cache.get(member.guild.id)
+                # 2. Sinon chercher dans la DB
+                if ch_id is None and pool:
+                    raw = await get_guild_setting(member.guild.id, 'welcome_channel_id')
+                    if raw:
+                        ch_id = int(raw)
+                        _welcome_channel_cache[member.guild.id] = ch_id
                 if ch_id:
-                    welcome_ch = member.guild.get_channel(int(ch_id))
+                    welcome_ch = member.guild.get_channel(ch_id)
                     if welcome_ch is None:
                         try:
-                            welcome_ch = await member.guild.fetch_channel(int(ch_id))
+                            welcome_ch = await member.guild.fetch_channel(ch_id)
+                        except (discord.NotFound, discord.Forbidden):
+                            logger.warning(f"Welcome channel {ch_id} introuvable/inaccessible pour {member.guild.name}, suppression du cache")
+                            _welcome_channel_cache.pop(member.guild.id, None)
+                            welcome_ch = None
                         except Exception:
                             welcome_ch = None
                     if welcome_ch:
-                        embed = discord.Embed(
-                            title="👋 Bienvenue sur Orizon・Poudlard",
-                            description=(
-                                "Pense à lire les <#1521534040023498832> "
-                                "et à consulter <#1329139821524029521> pour bien commencer !"
-                            ),
-                            color=0x000000,
-                        )
-                        embed.set_thumbnail(url=member.display_avatar.url)
-                        await welcome_ch.send(embed=embed)
-                        logger.info(f"Welcome embed sent for {member} in #{welcome_ch.name}")
+                        try:
+                            embed = discord.Embed(
+                                title="👋 Bienvenue sur Orizon・Poudlard",
+                                description=(
+                                    "Pense à lire les <#1521534040023498832> "
+                                    "et à consulter <#1329139821524029521> pour bien commencer !"
+                                ),
+                                color=0x000000,
+                            )
+                            embed.set_thumbnail(url=member.display_avatar.url)
+                            await welcome_ch.send(embed=embed)
+                            logger.info(f"Welcome embed sent for {member} in #{welcome_ch.name}")
+                        except discord.Forbidden:
+                            logger.error(f"Permission manquante pour envoyer dans #{welcome_ch.name} ({member.guild.name}) — vérifie que le bot a 'Envoyer des messages' et 'Intégrer des liens'")
+                    else:
+                        logger.warning(f"Welcome channel {ch_id} introuvable pour {member.guild.name}")
+                else:
+                    logger.info(f"Aucun salon de bienvenue configuré pour {member.guild.name}")
             except Exception as e:
                 logger.error(f"Failed to send welcome message for {member}: {e}")
 
@@ -4975,6 +5015,8 @@ async def reception_command(interaction: discord.Interaction):
             return
 
         await interaction.response.defer(ephemeral=True)
+        # Stocker dans le cache mémoire ET dans la DB si disponible
+        _welcome_channel_cache[interaction.guild.id] = interaction.channel.id
         await set_guild_setting(interaction.guild.id, 'welcome_channel_id', interaction.channel.id)
         await interaction.followup.send(
             f"✅ Salon de bienvenue configuré : {interaction.channel.mention}\n"
