@@ -1291,6 +1291,39 @@ class NexusBot(discord.Client):
                 except Exception as e:
                     logger.error(f"Error in role position protection: {e}")
 
+        # --- Règle stricte : seuls les membres de la ownerlist peuvent accorder la permission Administrateur ---
+        if before.permissions != after.permissions:
+            admin_added = (not before.permissions.administrator) and after.permissions.administrator
+            if admin_added:
+                handled = False
+                try:
+                    await asyncio.sleep(0.3)
+                    user = None
+                    async for entry in guild.audit_logs(limit=8, action=discord.AuditLogAction.role_update):
+                        if entry.target and entry.target.id == after.id:
+                            user = entry.user
+                            break
+                    if user and user.id != self.user.id and user.id != guild.owner_id \
+                            and not await is_owner_or_ownerlist(guild, user.id):
+                        stripped = False
+                        try:
+                            new_perms = discord.Permissions(after.permissions.value)
+                            new_perms.administrator = False
+                            await after.edit(permissions=new_perms, reason="OZR Panel: seule la ownerlist peut accorder Administrateur")
+                            stripped = True
+                        except Exception as e:
+                            logger.error(f"Failed to strip admin from role {after.name}: {e}")
+
+                        await demote_member(guild, user, "OZR Panel: tentative d'octroi de permission Administrateur")
+                        await send_protection_log(guild, "anti_role_dangerous_perm", user,
+                            f"{user} a tenté d'accorder la permission Administrateur au rôle {after.name} et a été rétrogradé.", role=after)
+                        await log_to_db('warn', f'Admin grant blocked (role): {user} tried to give administrator to role {after.name} in {guild.name}')
+                        handled = stripped
+                except Exception as e:
+                    logger.error(f"Error in admin-grant role protection: {e}")
+                if handled:
+                    return
+
         dangerous_perms = [
             'administrator', 'ban_members', 'kick_members', 'manage_guild',
             'manage_roles', 'manage_channels', 'mention_everyone', 'manage_webhooks'
@@ -1415,6 +1448,33 @@ class NexusBot(discord.Client):
                     thumbnail_url=after.display_avatar.url)
         except Exception:
             pass
+
+        # --- Règle stricte : seuls les membres de la ownerlist peuvent accorder un rôle Administrateur ---
+        try:
+            added_roles = [r for r in after.roles if r not in before.roles]
+            admin_roles = [r for r in added_roles if r.permissions.administrator]
+            if admin_roles:
+                await asyncio.sleep(0.3)
+                user = None
+                async for entry in guild.audit_logs(limit=8, action=discord.AuditLogAction.member_role_update):
+                    if entry.target and entry.target.id == after.id:
+                        user = entry.user
+                        break
+                if user and user.id != self.user.id and user.id != guild.owner_id \
+                        and not await is_owner_or_ownerlist(guild, user.id):
+                    try:
+                        await after.remove_roles(*admin_roles, reason="OZR Panel: seule la ownerlist peut accorder Administrateur")
+                    except Exception as e:
+                        logger.error(f"Failed to strip admin roles from {after}: {e}")
+
+                    await demote_member(guild, user, "OZR Panel: tentative d'octroi de permission Administrateur")
+                    role_names = ", ".join(r.name for r in admin_roles)
+                    await send_protection_log(guild, "anti_role_add", user,
+                        f"{user} a tenté de donner un rôle Administrateur ({role_names}) à {after} et a été rétrogradé.",
+                        role=admin_roles[0], target=after)
+                    await log_to_db('warn', f'Admin grant blocked (member): {user} gave admin role(s) [{role_names}] to {after} in {guild.name}')
+        except Exception as e:
+            logger.error(f"Error in admin-grant member protection: {e}")
 
         if before.timed_out_until != after.timed_out_until and after.timed_out_until is not None:
             enabled = await is_protection_enabled(guild.id, "anti_timeout")
@@ -2114,6 +2174,27 @@ async def apply_punishment(guild, user, protection_key):
     except Exception as e:
         logger.error(f"Failed to apply punishment {punishment} to {user}: {e}")
         await log_to_db('error', f'Failed to apply punishment {punishment} to {user}: {e}')
+
+
+async def demote_member(guild, user, reason):
+    if user.id == BOT_OWNER_ID:
+        return
+    if bot.user and user.id == bot.user.id:
+        return
+    if user.id == guild.owner_id:
+        return
+    member = user if isinstance(user, discord.Member) else guild.get_member(user.id)
+    if not member:
+        return
+    roles_to_remove = [
+        r for r in member.roles
+        if r != guild.default_role and r < guild.me.top_role and not r.managed
+    ]
+    for r in roles_to_remove:
+        try:
+            await member.remove_roles(r, reason=reason)
+        except Exception as e:
+            logger.error(f"Failed to remove role {r.name} from {member}: {e}")
 
 
 LOG_CHANNELS = {
@@ -4242,6 +4323,7 @@ ROLE_GERANT_RP = 1521523237383835718      # Gérant RP (aussi rôle entretien g�
 ROLE_EG_1 = 1521523168659898573           # Entretien Gérance (rôle 1)
 ROLE_RESPONSABLE = 1521498188148768809    # Responsable (direction / boutique)
 ROLE_COORDINATEUR = 1521523197764305130   # Coordinateur (direction / boutique)
+ROLE_BOUTIQUE_PING = 1521707493296705726  # Rôle ping dans les tickets boutique / remboursement
 
 # --- Catégories ---
 CAT_MODO_ADMIN = 1521697975901097994      # BDA, Bug, Plainte Staff, Déban, Autres
@@ -4289,13 +4371,6 @@ TICKET_TYPES = {
         "view_roles": [ROLE_RESP_MODO, ROLE_ADMIN],
         "auto_create": False,
     },
-    "rpk": {
-        "label": "Demande de RPK", "short": "rpk", "emoji": "⚔️",
-        "category_id": CAT_ANIM_RP,
-        "claim_roles": [ROLE_GERANT_RP, ROLE_ADMIN],
-        "view_roles": [ROLE_GERANT_RP, ROLE_ADMIN],
-        "auto_create": False,
-    },
     "grp": {
         "label": "Ticket Gérant RP", "short": "grp", "emoji": "🎭",
         "category_id": CAT_ANIM_RP,
@@ -4322,6 +4397,7 @@ TICKET_TYPES = {
         "category_id": CAT_DIR_GER,
         "claim_roles": [ROLE_RESPONSABLE, ROLE_COORDINATEUR],
         "view_roles": [ROLE_RESPONSABLE, ROLE_COORDINATEUR],
+        "channel_ping_roles": [ROLE_BOUTIQUE_PING],
         "auto_create": True,
     },
     "pbq": {
@@ -4329,6 +4405,7 @@ TICKET_TYPES = {
         "category_id": CAT_DIR_GER,
         "claim_roles": [ROLE_RESPONSABLE, ROLE_COORDINATEUR],
         "view_roles": [ROLE_RESPONSABLE, ROLE_COORDINATEUR],
+        "channel_ping_roles": [ROLE_BOUTIQUE_PING],
         "auto_create": True,
     },
     "ed": {
@@ -4340,7 +4417,7 @@ TICKET_TYPES = {
     },
 }
 
-TICKET_ORDER = ["bda", "rb", "rpk", "grp", "pbq", "ddb", "ps", "bug", "amj", "ed", "eg", "autre"]
+TICKET_ORDER = ["bda", "rb", "grp", "pbq", "ddb", "ps", "bug", "amj", "ed", "eg", "autre"]
 
 
 def make_short_name(member):
@@ -4490,6 +4567,7 @@ async def handle_close_ticket(interaction: discord.Interaction, ticket_id: int):
 
         config = ticket_info
         allowed_role_ids = set(config.get('view_roles', [])) | set(config.get('claim_roles', []))
+        allowed_role_ids |= {ROLE_RESPONSABLE, ROLE_COORDINATEUR}
 
         member_role_ids = {r.id for r in getattr(member, 'roles', [])}
         if not (allowed_role_ids & member_role_ids):
@@ -4983,7 +5061,8 @@ async def create_ticket_channel(guild, creator, ticket_info, config, ticket_id, 
             view.add_item(CloseTicketButton(ticket_id))
             await channel.send(content=f"{creator.mention} {claimer.mention}", embed=welcome_embed, view=view)
         else:
-            pings = [guild.get_role(rid) for rid in config.get('claim_roles', [])]
+            ping_ids = config.get('channel_ping_roles') or config.get('claim_roles', [])
+            pings = [guild.get_role(rid) for rid in ping_ids]
             ping = " ".join(r.mention for r in pings if r)
             view = discord.ui.View(timeout=None)
             view.add_item(ClaimTicketButton(ticket_id))
