@@ -5113,15 +5113,20 @@ async def reception_command(interaction: discord.Interaction):
             return
 
         await interaction.response.defer(ephemeral=True)
-        # Stocker dans le cache mémoire ET dans la DB si disponible
         _welcome_channel_cache[interaction.guild.id] = interaction.channel.id
-        await set_guild_setting(interaction.guild.id, 'welcome_channel_id', interaction.channel.id)
+        try:
+            await set_guild_setting(interaction.guild.id, 'welcome_channel_id', interaction.channel.id)
+        except Exception:
+            pass
         await interaction.followup.send(
             f"✅ Salon de bienvenue configuré : {interaction.channel.mention}\n"
             "Le bot enverra automatiquement le message de bienvenue à chaque nouveau membre.",
             ephemeral=True
         )
-        await log_to_db('info', f'/reception configured by {interaction.user} -> #{interaction.channel}')
+        try:
+            await log_to_db('info', f'/reception configured by {interaction.user} -> #{interaction.channel}')
+        except Exception:
+            pass
     except Exception as e:
         logger.error(f"Error in /reception command: {traceback.format_exc()}")
         try:
