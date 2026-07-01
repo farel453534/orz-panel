@@ -435,6 +435,13 @@ class NexusBot(discord.Client):
         except Exception as e:
             logger.error(f"Failed to register ticket views: {e}")
 
+        try:
+            self.add_view(RecrutementPanelView())
+            self.add_dynamic_items(RecrutementButton, RecrutementCloseButton)
+            logger.info("Registered persistent recrutement views.")
+        except Exception as e:
+            logger.error(f"Failed to register recrutement views: {e}")
+
         if not self.synced:
             for guild in self.guilds:
                 try:
@@ -4984,6 +4991,285 @@ async def ticket_command(interaction: discord.Interaction):
             await log_to_db('error', f'Error in /ticket: {e}')
         except Exception:
             pass
+        try:
+            if not interaction.response.is_done():
+                await interaction.response.send_message("❌ Une erreur est survenue.", ephemeral=True)
+        except Exception:
+            pass
+
+
+# ─────────────────────────────────────────────
+#  PANEL DE RECRUTEMENT STAFF
+# ─────────────────────────────────────────────
+
+RECRUTEMENT_TYPES = {
+    "mod":   {"label": "Modérateur",         "emoji": "🛡️",  "role_id": 1521524596199788554, "access_role": 1521523529814900897},
+    "anim":  {"label": "Animateur",          "emoji": "🎉",  "role_id": 1521524656782442536, "access_role": 1521523603265556600},
+    "mdj":   {"label": "Maître du Jeu",      "emoji": "🎲",  "role_id": 1521524695751462963, "access_role": 1521523603265556600},
+    "cm":    {"label": "Community Manager",  "emoji": "📣",  "role_id": 1521524623588462622, "access_role": 1521523741903818874},
+    "graph": {"label": "Graphiste",          "emoji": "🎨",  "role_id": 1521524876593070090, "access_role": 1521523741903818874},
+    "tech":  {"label": "Équipe Technique",   "emoji": "⚙️",  "role_id": 1521682585762136104, "access_role": 1521524908893540403},
+}
+RECRUTEMENT_CATEGORY = 1521683556546383882
+
+
+class RecrutementCloseButton(discord.ui.DynamicItem[discord.ui.Button], template=r'recru_close:(?P<channel_id>\d+)'):
+    def __init__(self, channel_id: int):
+        self.channel_id = channel_id
+        super().__init__(
+            discord.ui.Button(
+                label="Fermer la candidature",
+                emoji="🔒",
+                style=discord.ButtonStyle.danger,
+                custom_id=f'recru_close:{channel_id}',
+            )
+        )
+
+    @classmethod
+    async def from_custom_id(cls, interaction, item, match):
+        return cls(int(match.group('channel_id')))
+
+    async def callback(self, interaction: discord.Interaction):
+        try:
+            await interaction.response.defer(ephemeral=True)
+            channel = interaction.channel
+            guild = interaction.guild
+            user = interaction.user
+            # Seul le candidat, les admins ou le bot owner peuvent fermer
+            is_owner = user.id == BOT_OWNER_ID
+            is_admin = user.guild_permissions.administrator if guild else False
+            is_creator = channel and channel.name and make_short_name(user) in channel.name
+            if not (is_owner or is_admin or is_creator):
+                await interaction.followup.send("❌ Vous n'avez pas la permission de fermer cette candidature.", ephemeral=True)
+                return
+            close_embed = discord.Embed(
+                description=f"🔒 Candidature fermée par {user.mention}.",
+                color=0xe74c3c,
+                timestamp=datetime.datetime.utcnow()
+            )
+            await channel.send(embed=close_embed)
+            await interaction.followup.send("✅ Fermeture en cours...", ephemeral=True)
+            import asyncio
+            await asyncio.sleep(3)
+            await channel.delete(reason=f"Candidature fermée par {user}")
+            try:
+                await log_to_db('info', f'Candidature #{channel.name} fermée par {user}')
+            except Exception:
+                pass
+        except Exception as e:
+            logger.error(f"Erreur fermeture candidature: {e}")
+            try:
+                await interaction.followup.send("❌ Une erreur est survenue.", ephemeral=True)
+            except Exception:
+                pass
+
+
+class RecrutementButton(discord.ui.DynamicItem[discord.ui.Button], template=r'recru:(?P<key>[a-z]+)'):
+    def __init__(self, key: str):
+        info = RECRUTEMENT_TYPES[key]
+        self.key = key
+        super().__init__(
+            discord.ui.Button(
+                label=info["label"],
+                emoji=info["emoji"],
+                style=discord.ButtonStyle.secondary,
+                custom_id=f'recru:{key}',
+            )
+        )
+
+    @classmethod
+    async def from_custom_id(cls, interaction, item, match):
+        return cls(match.group('key'))
+
+    async def callback(self, interaction: discord.Interaction):
+        await handle_recrutement_creation(interaction, self.key)
+
+
+class RecrutementPanelView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+        for key in RECRUTEMENT_TYPES:
+            self.add_item(RecrutementButton(key))
+
+
+class RecrutementPanelLayout(discord.ui.LayoutView):
+    def __init__(self):
+        super().__init__(timeout=None)
+        container = discord.ui.Container(accent_colour=0x2b2d31)
+
+        try:
+            gallery = discord.ui.MediaGallery()
+            gallery.add_item(media="attachment://recrutement.png")
+            container.add_item(gallery)
+        except Exception:
+            pass
+
+        container.add_item(discord.ui.TextDisplay(
+            "## 📋  CANDIDATURES STAFF — Orizon・Poudlard"
+        ))
+        container.add_item(discord.ui.Separator())
+        container.add_item(discord.ui.TextDisplay(
+            "### Comment postuler ?\n"
+            "1️⃣  Clique sur le poste qui t'intéresse ci-dessous.\n"
+            "2️⃣  Un salon privé de candidature sera créé.\n"
+            "3️⃣  Remplis ta candidature dans ce salon, le recruteur te répondra."
+        ))
+        container.add_item(discord.ui.TextDisplay(
+            "### Postes disponibles\n"
+            "🛡️ **Modérateur** — Faire respecter les règles et gérer les conflits.\n"
+            "🎉 **Animateur** — Organiser des événements et animer la communauté.\n"
+            "🎲 **Maître du Jeu** — Diriger des sessions de jeu de rôle.\n"
+            "📣 **Community Manager** — Gérer la communication et les réseaux.\n"
+            "🎨 **Graphiste** — Créer des visuels pour le serveur.\n"
+            "⚙️ **Équipe Technique** — Gérer la partie technique du serveur."
+        ))
+        container.add_item(discord.ui.Separator())
+        container.add_item(discord.ui.TextDisplay(
+            "### Sélectionne ton poste"
+        ))
+
+        # Rangée 1 : mod, anim, mdj
+        row1 = discord.ui.ActionRow()
+        for key in ["mod", "anim", "mdj"]:
+            row1.add_item(RecrutementButton(key))
+        container.add_item(row1)
+
+        # Rangée 2 : cm, graph, tech
+        row2 = discord.ui.ActionRow()
+        for key in ["cm", "graph", "tech"]:
+            row2.add_item(RecrutementButton(key))
+        container.add_item(row2)
+
+        container.add_item(discord.ui.Separator())
+        container.add_item(discord.ui.TextDisplay(
+            "-# Orizon • Poudlard | Recrutement Staff"
+        ))
+        self.add_item(container)
+
+
+async def handle_recrutement_creation(interaction: discord.Interaction, key: str):
+    try:
+        await interaction.response.defer(ephemeral=True)
+        guild = interaction.guild
+        user = interaction.user
+        if not guild:
+            await interaction.followup.send("❌ Cette commande doit être utilisée sur un serveur.", ephemeral=True)
+            return
+
+        info = RECRUTEMENT_TYPES.get(key)
+        if not info:
+            await interaction.followup.send("❌ Type de candidature inconnu.", ephemeral=True)
+            return
+
+        category = guild.get_channel(RECRUTEMENT_CATEGORY)
+        if not category or not isinstance(category, discord.CategoryChannel):
+            await interaction.followup.send("❌ Catégorie de recrutement introuvable. Contactez un administrateur.", ephemeral=True)
+            return
+
+        # Vérifier si le candidat a déjà un ticket ouvert pour ce poste
+        existing = discord.utils.get(
+            category.channels,
+            name=f"candidature-{key}-{make_short_name(user)}"
+        )
+        if existing:
+            await interaction.followup.send(
+                f"❌ Vous avez déjà une candidature ouverte pour **{info['label']}** : {existing.mention}",
+                ephemeral=True
+            )
+            return
+
+        access_role = guild.get_role(info["access_role"])
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(view_channel=False),
+            guild.me: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True, manage_channels=True, manage_messages=True),
+            user: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True, attach_files=True, embed_links=True),
+        }
+        if access_role:
+            overwrites[access_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True, attach_files=True, embed_links=True)
+
+        channel_name = f"candidature-{key}-{make_short_name(user)}"
+        try:
+            channel = await guild.create_text_channel(
+                name=channel_name,
+                category=category,
+                overwrites=overwrites,
+                topic=f"Candidature {info['label']} — {user} ({user.id})"
+            )
+        except Exception as e:
+            logger.error(f"Erreur création salon recrutement: {e}")
+            await interaction.followup.send("❌ Impossible de créer le salon. Vérifiez les permissions du bot.", ephemeral=True)
+            return
+
+        close_view = discord.ui.View(timeout=None)
+        close_view.add_item(discord.ui.Button(
+            label="Fermer la candidature",
+            emoji="🔒",
+            style=discord.ButtonStyle.danger,
+            custom_id=f"recru_close:{channel.id}",
+        ))
+
+        welcome_embed = discord.Embed(
+            title=f"{info['emoji']} Candidature — {info['label']}",
+            description=(
+                f"**Candidat :** {user.mention} (`{user}`)\n"
+                f"**Poste visé :** {info['label']}\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━\n"
+                "**📝 Pour postuler, réponds aux questions suivantes :**\n\n"
+                "**1.** Quel est ton âge ?\n"
+                "**2.** Depuis combien de temps es-tu sur le serveur ?\n"
+                "**3.** Pourquoi veux-tu rejoindre l'équipe ?\n"
+                "**4.** Quelle expérience as-tu dans ce domaine ?\n"
+                "**5.** Combien d'heures par semaine peux-tu consacrer au serveur ?\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━\n"
+                "-# Un recruteur examinera ta candidature dès que possible."
+            ),
+            color=0x2b2d31,
+            timestamp=datetime.datetime.utcnow()
+        )
+        try:
+            welcome_embed.set_thumbnail(url=user.display_avatar.url)
+        except Exception:
+            pass
+
+        ping = access_role.mention if access_role else ""
+        await channel.send(content=f"{user.mention} {ping}".strip(), embed=welcome_embed, view=close_view)
+
+        await interaction.followup.send(
+            f"✅ Ton salon de candidature a été créé : {channel.mention}\nRéponds aux questions pour postuler !",
+            ephemeral=True
+        )
+        try:
+            await log_to_db('info', f'Candidature {info["label"]} ouverte par {user} -> #{channel.name}')
+        except Exception:
+            pass
+    except Exception as e:
+        logger.error(f"Erreur handle_recrutement_creation: {traceback.format_exc()}")
+        try:
+            await interaction.followup.send("❌ Une erreur est survenue.", ephemeral=True)
+        except Exception:
+            pass
+
+
+@bot.tree.command(name="panel-recrutement", description="Envoyer le panneau de recrutement staff dans ce salon.")
+@app_commands.default_permissions(administrator=True)
+async def panel_recrutement_command(interaction: discord.Interaction):
+    try:
+        view = RecrutementPanelLayout()
+        _recru_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "recrutement.png")
+        if os.path.exists(_recru_path):
+            import io as _io
+            with open(_recru_path, "rb") as _f:
+                _data = _f.read()
+            await interaction.channel.send(file=discord.File(_io.BytesIO(_data), filename="recrutement.png"), view=view)
+        else:
+            await interaction.channel.send(view=view)
+        await interaction.response.send_message("✅ Panneau de recrutement envoyé.", ephemeral=True)
+        try:
+            await log_to_db('info', f'/panel-recrutement sent by {interaction.user} in #{interaction.channel}')
+        except Exception:
+            pass
+    except Exception as e:
+        logger.error(f"Error in /panel-recrutement: {traceback.format_exc()}")
         try:
             if not interaction.response.is_done():
                 await interaction.response.send_message("❌ Une erreur est survenue.", ephemeral=True)
