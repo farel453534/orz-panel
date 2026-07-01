@@ -5112,16 +5112,16 @@ class RecrutementPanelLayout(discord.ui.LayoutView):
             "### Comment postuler ?\n"
             "1️⃣  Clique sur le poste qui t'intéresse ci-dessous.\n"
             "2️⃣  Un salon privé de candidature sera créé.\n"
-            "3️⃣  Remplis ta candidature dans ce salon, le recruteur te répondra."
+            "3️⃣  Remplis ta candidature dans ce salon, un Responable te répondra."
         ))
         container.add_item(discord.ui.TextDisplay(
             "### Postes disponibles\n"
-            "🛡️ **Modérateur** — Faire respecter les règles et gérer les conflits.\n"
-            "🎉 **Animateur** — Organiser des événements et animer la communauté.\n"
-            "🎲 **Maître du Jeu** — Diriger des trames et aide les joueurs dans leurs RP.\n"
-            "📣 **Community Manager** — Gérer la communication et les réseaux.\n"
-            "🎨 **Graphiste** — Créer des visuels pour le serveur.\n"
-            "⚙️ **Équipe Technique** — Rejoindre l'équipe technique du serveur."
+            "🛡️ **Modérateur** ・ Faire respecter les règles et gérer les conflits.\n"
+            "🎉 **Animateur** ・ Organiser des événements et animer la communauté.\n"
+            "🎲 **Maître du Jeu** ・ Diriger des trames et aide les joueurs dans leurs RP.\n"
+            "📣 **Community Manager** ・ Gérer la communication et les réseaux.\n"
+            "🎨 **Graphiste** ・ Créer des visuels pour le serveur.\n"
+            "⚙️ **Équipe Technique** ・ Rejoindre l'équipe technique du serveur."
         ))
         container.add_item(discord.ui.Separator())
         container.add_item(discord.ui.TextDisplay(
