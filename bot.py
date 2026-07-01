@@ -354,40 +354,18 @@ class NexusBot(discord.Client):
 
         await self.change_presence(status=discord.Status.online, activity=None)
 
-        # Télécharger et rogner la bannière de bienvenue depuis WELCOME_BANNER_URL
+        # Charger la bannière de bienvenue depuis le fichier local
         global _welcome_banner_bytes
-        _banner_url = os.environ.get("WELCOME_BANNER_URL", "").strip()
-        if _banner_url:
+        _banner_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "bienvenue.png")
+        if os.path.exists(_banner_path):
             try:
-                import io
-                from PIL import Image
-                headers = {"User-Agent": "Mozilla/5.0 (compatible; OZRPanel/1.0)"}
-                async with aiohttp.ClientSession(headers=headers) as session:
-                    async with session.get(_banner_url, allow_redirects=True) as resp:
-                        if resp.status != 200:
-                            raise Exception(f"HTTP {resp.status} en téléchargeant la bannière")
-                        raw = await resp.read()
-                img = Image.open(io.BytesIO(raw)).convert("RGB")
-                # Rogner les bandes blanches (lignes où tous les pixels > 240)
-                top, bottom = 0, img.height - 1
-                while top < img.height:
-                    row_pixels = [img.getpixel((x, top)) for x in range(0, img.width, max(1, img.width // 50))]
-                    if any(r < 240 or g < 240 or b < 240 for r, g, b in row_pixels):
-                        break
-                    top += 1
-                while bottom > top:
-                    row_pixels = [img.getpixel((x, bottom)) for x in range(0, img.width, max(1, img.width // 50))]
-                    if any(r < 240 or g < 240 or b < 240 for r, g, b in row_pixels):
-                        break
-                    bottom -= 1
-                cropped = img.crop((0, top, img.width, bottom + 1))
-                buf = io.BytesIO()
-                cropped.save(buf, format="PNG")
-                buf.seek(0)
-                _welcome_banner_bytes = buf.read()
-                logger.info(f"Bannière de bienvenue chargée et rognée ({top}px top, {img.height - bottom - 1}px bottom supprimés)")
+                with open(_banner_path, "rb") as f:
+                    _welcome_banner_bytes = f.read()
+                logger.info("Bannière de bienvenue chargée depuis assets/bienvenue.png")
             except Exception as e:
                 logger.error(f"Impossible de charger la bannière de bienvenue: {e}")
+        else:
+            logger.warning("assets/bienvenue.png introuvable, embed sans image")
 
         # Charger les salons de bienvenue en cache mémoire dès le démarrage
         if pool:
