@@ -965,8 +965,6 @@ class NexusBot(discord.Client):
                             ),
                             color=0x2b2d31,
                         )
-                        embed.set_thumbnail(url=member.display_avatar.url)
-
                         # Tentative d'ajout de la bannière — sans bloquer l'envoi si ça échoue
                         banner_file = None
                         try:
