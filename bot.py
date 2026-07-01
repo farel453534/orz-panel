@@ -361,8 +361,11 @@ class NexusBot(discord.Client):
             try:
                 import io
                 from PIL import Image
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(_banner_url) as resp:
+                headers = {"User-Agent": "Mozilla/5.0 (compatible; OZRPanel/1.0)"}
+                async with aiohttp.ClientSession(headers=headers) as session:
+                    async with session.get(_banner_url, allow_redirects=True) as resp:
+                        if resp.status != 200:
+                            raise Exception(f"HTTP {resp.status} en téléchargeant la bannière")
                         raw = await resp.read()
                 img = Image.open(io.BytesIO(raw)).convert("RGB")
                 # Rogner les bandes blanches (lignes où tous les pixels > 240)
