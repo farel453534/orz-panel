@@ -35,6 +35,44 @@ _welcome_banner_bytes = None  # bytes de l'image rognée, chargée au démarrage
 _CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
 
 
+def _try_load_banner():
+    import io
+    from PIL import Image
+    _base = os.path.dirname(os.path.abspath(__file__))
+    candidates = [
+        os.path.join(_base, "bienvenue.png"),
+        os.path.abspath("bienvenue.png"),
+        os.path.join(_base, "assets", "bienvenue.png"),
+        os.path.join(_base, "attached_assets", "bienvenue_cropped.png"),
+        os.path.join(_base, "attached_assets", "Bienvenue_(1)_1782864806413.png"),
+    ]
+    found = next((p for p in candidates if os.path.exists(p)), None)
+    if not found:
+        logger.warning(f"Bannière introuvable. Chemins testés: {candidates}")
+        return None
+    try:
+        img = Image.open(found).convert("RGB")
+        top, bottom = 0, img.height - 1
+        while top < img.height:
+            row = [img.getpixel((x, top)) for x in range(0, img.width, max(1, img.width // 50))]
+            if any(r < 240 or g < 240 or b < 240 for r, g, b in row):
+                break
+            top += 1
+        while bottom > top:
+            row = [img.getpixel((x, bottom)) for x in range(0, img.width, max(1, img.width // 50))]
+            if any(r < 240 or g < 240 or b < 240 for r, g, b in row):
+                break
+            bottom -= 1
+        cropped = img.crop((0, top, img.width, bottom + 1))
+        buf = io.BytesIO()
+        cropped.save(buf, format="PNG")
+        logger.info(f"Bannière chargée: {found} ({top}px haut / {img.height - bottom - 1}px bas supprimés)")
+        return buf.getvalue()
+    except Exception as e:
+        logger.error(f"Erreur chargement bannière {found}: {e}")
+        return None
+
+
 def _load_config():
     try:
         if os.path.exists(_CONFIG_FILE):
@@ -393,37 +431,9 @@ class NexusBot(discord.Client):
 
         # Charger et rogner la bannière de bienvenue (cherche dans plusieurs emplacements)
         global _welcome_banner_bytes
-        _base = os.path.dirname(os.path.abspath(__file__))
-        _candidate_paths = [
-            os.path.join(_base, "bienvenue.png"),
-            os.path.join(_base, "assets", "bienvenue.png"),
-            os.path.join(_base, "attached_assets", "bienvenue_cropped.png"),
-            os.path.join(_base, "attached_assets", "Bienvenue_(1)_1782864806413.png"),
-        ]
-        _found = next((p for p in _candidate_paths if os.path.exists(p)), None)
-        if _found:
-            try:
-                import io
-                from PIL import Image
-                img = Image.open(_found).convert("RGB")
-                top, bottom = 0, img.height - 1
-                while top < img.height:
-                    row = [img.getpixel((x, top)) for x in range(0, img.width, max(1, img.width // 50))]
-                    if any(r < 240 or g < 240 or b < 240 for r, g, b in row):
-                        break
-                    top += 1
-                while bottom > top:
-                    row = [img.getpixel((x, bottom)) for x in range(0, img.width, max(1, img.width // 50))]
-                    if any(r < 240 or g < 240 or b < 240 for r, g, b in row):
-                        break
-                    bottom -= 1
-                cropped = img.crop((0, top, img.width, bottom + 1))
-                buf = io.BytesIO()
-                cropped.save(buf, format="PNG")
-                _welcome_banner_bytes = buf.getvalue()
-                logger.info(f"Bannière chargée depuis {_found} ({top}px haut / {img.height - bottom - 1}px bas supprimés)")
-            except Exception as e:
-                logger.error(f"Impossible de charger la bannière de bienvenue: {e}")
+        _welcome_banner_bytes = _try_load_banner()
+        if _welcome_banner_bytes:
+            logger.info("Bannière de bienvenue chargée avec succès")
         else:
             logger.warning("Aucune bannière de bienvenue trouvée, embed sans image")
 
@@ -979,9 +989,10 @@ class NexusBot(discord.Client):
                                 color=0x2b2d31,
                             )
                             embed.set_thumbnail(url=member.display_avatar.url)
-                            if _welcome_banner_bytes:
-                                import io
-                                banner_file = discord.File(io.BytesIO(_welcome_banner_bytes), filename="bienvenue.png")
+                            import io
+                            banner = _welcome_banner_bytes or _try_load_banner()
+                            if banner:
+                                banner_file = discord.File(io.BytesIO(banner), filename="bienvenue.png")
                                 embed.set_image(url="attachment://bienvenue.png")
                                 await welcome_ch.send(file=banner_file, embed=embed)
                             else:
