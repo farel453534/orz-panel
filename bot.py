@@ -39,16 +39,19 @@ def _try_load_banner():
     import io
     from PIL import Image
     _base = os.path.dirname(os.path.abspath(__file__))
+    _cwd = os.getcwd()
     candidates = [
+        os.path.join(_cwd, "bienvenue.png"),
         os.path.join(_base, "bienvenue.png"),
-        os.path.abspath("bienvenue.png"),
+        os.path.join(_cwd, "assets", "bienvenue.png"),
         os.path.join(_base, "assets", "bienvenue.png"),
         os.path.join(_base, "attached_assets", "bienvenue_cropped.png"),
-        os.path.join(_base, "attached_assets", "Bienvenue_(1)_1782864806413.png"),
     ]
+    # Dédoublonner tout en gardant l'ordre
+    seen, candidates = set(), [p for p in candidates if not (p in seen or seen.add(p))]
     found = next((p for p in candidates if os.path.exists(p)), None)
+    logger.info(f"Recherche bannière — CWD: {_cwd}, BASE: {_base}, trouvé: {found}")
     if not found:
-        logger.warning(f"Bannière introuvable. Chemins testés: {candidates}")
         return None
     try:
         img = Image.open(found).convert("RGB")
@@ -66,7 +69,7 @@ def _try_load_banner():
         cropped = img.crop((0, top, img.width, bottom + 1))
         buf = io.BytesIO()
         cropped.save(buf, format="PNG")
-        logger.info(f"Bannière chargée: {found} ({top}px haut / {img.height - bottom - 1}px bas supprimés)")
+        logger.info(f"Bannière chargée: {found} ({top}px haut / {img.height - bottom - 1}px supprimés)")
         return buf.getvalue()
     except Exception as e:
         logger.error(f"Erreur chargement bannière {found}: {e}")
@@ -979,27 +982,37 @@ class NexusBot(discord.Client):
                         except Exception:
                             welcome_ch = None
                     if welcome_ch:
+                        embed = discord.Embed(
+                            title="👋 Bienvenue sur Orizon・Poudlard",
+                            description=(
+                                "Pense à lire les <#1521534040023498832> "
+                                "et à consulter <#1521534041386516631> pour bien commencer !"
+                            ),
+                            color=0x2b2d31,
+                        )
+                        embed.set_thumbnail(url=member.display_avatar.url)
+
+                        # Tentative d'ajout de la bannière — sans bloquer l'envoi si ça échoue
+                        banner_file = None
                         try:
-                            embed = discord.Embed(
-                                title="👋 Bienvenue sur Orizon・Poudlard",
-                                description=(
-                                    "Pense à lire les <#1521534040023498832> "
-                                    "et à consulter <#1521534041386516631> pour bien commencer !"
-                                ),
-                                color=0x2b2d31,
-                            )
-                            embed.set_thumbnail(url=member.display_avatar.url)
                             import io
                             banner = _welcome_banner_bytes or _try_load_banner()
                             if banner:
                                 banner_file = discord.File(io.BytesIO(banner), filename="bienvenue.png")
                                 embed.set_image(url="attachment://bienvenue.png")
+                        except Exception as banner_err:
+                            logger.warning(f"Bannière ignorée: {banner_err}")
+
+                        try:
+                            if banner_file:
                                 await welcome_ch.send(file=banner_file, embed=embed)
                             else:
                                 await welcome_ch.send(embed=embed)
                             logger.info(f"Welcome embed sent for {member} in #{welcome_ch.name}")
                         except discord.Forbidden:
-                            logger.error(f"Permission manquante pour envoyer dans #{welcome_ch.name} ({member.guild.name}) — vérifie que le bot a 'Envoyer des messages' et 'Intégrer des liens'")
+                            logger.error(f"Permission manquante dans #{welcome_ch.name} ({member.guild.name})")
+                        except Exception as e:
+                            logger.error(f"Erreur envoi welcome: {e}")
                     else:
                         logger.warning(f"Welcome channel {ch_id} introuvable pour {member.guild.name}")
                 else:
