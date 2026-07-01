@@ -4381,40 +4381,32 @@ class TicketPanelView(discord.ui.View):
 class TicketPanelLayout(discord.ui.LayoutView):
     def __init__(self, with_banner: bool = True):
         super().__init__(timeout=None)
-        container = discord.ui.Container(accent_colour=0x2d1532)
-
-        if with_banner:
-            try:
-                gallery = discord.ui.MediaGallery()
-                gallery.add_item(media="https://i.imgur.com/wrCe899.png")
-                container.add_item(gallery)
-            except Exception:
-                pass
+        container = discord.ui.Container(accent_colour=0x0b1a3a)
 
         container.add_item(discord.ui.TextDisplay(
-            "## 🧊  OUVRIR UN TICKET AUPRÈS DU STAFF"
+            "## 🎫  Ouvrir un ticket auprès du staff"
         ))
         container.add_item(discord.ui.Separator())
         container.add_item(discord.ui.TextDisplay(
-            "### COMMENT ÇA MARCHE ?\n"
-            "1️⃣  Sélectionnez votre raison dans le menu ci-dessous.\n"
-            "2️⃣  Une demande sera envoyée au staff.\n"
-            "3️⃣  Vous recevrez un MP quand votre ticket sera accepté."
+            "### 📌 Comment ça marche ?\n"
+            "1️⃣  Sélectionnez la raison de votre demande dans le menu ci-dessous.\n"
+            "2️⃣  Votre demande est transmise à l'équipe concernée.\n"
+            "3️⃣  Vous recevez un message privé dès qu'un membre du staff la prend en charge."
         ))
         container.add_item(discord.ui.TextDisplay(
-            "### RÈGLES DE COURTOISIE\n"
-            "• Merci de rester poli et respectueux.\n"
-            "• Toute forme de harcèlement est interdite."
+            "### 🤝 Règles de courtoisie\n"
+            "• Restez poli et respectueux envers le staff.\n"
+            "• Toute forme de harcèlement ou d'abus est strictement interdite."
         ))
         container.add_item(discord.ui.TextDisplay(
-            "### INFORMATION IMPORTANTE\n"
-            "» Pour tout ticket de demande d'entretien, problèmes boutiques ou autorisation RP, "
-            "merci de faire preuve de patience. Les délais de réponses peuvent être plus ou moins longs."
+            "### ⏳ Information importante\n"
+            "» Pour les demandes d'entretien, les problèmes de boutique ou les autorisations RP, "
+            "merci de faire preuve de patience : les délais de réponse peuvent varier."
         ))
         container.add_item(discord.ui.Separator())
         container.add_item(discord.ui.TextDisplay(
-            "### Sélection du ticket\n"
-            "Choisissez une raison dans le menu ci-dessous."
+            "### 🎯 Sélection du ticket\n"
+            "Choisissez une raison dans le menu ci-dessous pour commencer."
         ))
 
         action_row = discord.ui.ActionRow()
