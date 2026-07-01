@@ -31,6 +31,7 @@ pool = None
 
 # Cache mémoire pour les salons de bienvenue (indépendant de la DB)
 _welcome_channel_cache = {}  # guild_id (int) -> channel_id (int)
+_welcome_banner_bytes = None  # bytes de l'image rognée, chargée au démarrage
 
 
 async def init_db():
@@ -353,6 +354,38 @@ class NexusBot(discord.Client):
 
         await self.change_presence(status=discord.Status.online, activity=None)
 
+        # Télécharger et rogner la bannière de bienvenue depuis WELCOME_BANNER_URL
+        global _welcome_banner_bytes
+        _banner_url = os.environ.get("WELCOME_BANNER_URL", "").strip()
+        if _banner_url:
+            try:
+                import io
+                from PIL import Image
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(_banner_url) as resp:
+                        raw = await resp.read()
+                img = Image.open(io.BytesIO(raw)).convert("RGB")
+                # Rogner les bandes blanches (lignes où tous les pixels > 240)
+                top, bottom = 0, img.height - 1
+                while top < img.height:
+                    row_pixels = [img.getpixel((x, top)) for x in range(0, img.width, max(1, img.width // 50))]
+                    if any(r < 240 or g < 240 or b < 240 for r, g, b in row_pixels):
+                        break
+                    top += 1
+                while bottom > top:
+                    row_pixels = [img.getpixel((x, bottom)) for x in range(0, img.width, max(1, img.width // 50))]
+                    if any(r < 240 or g < 240 or b < 240 for r, g, b in row_pixels):
+                        break
+                    bottom -= 1
+                cropped = img.crop((0, top, img.width, bottom + 1))
+                buf = io.BytesIO()
+                cropped.save(buf, format="PNG")
+                buf.seek(0)
+                _welcome_banner_bytes = buf.read()
+                logger.info(f"Bannière de bienvenue chargée et rognée ({top}px top, {img.height - bottom - 1}px bottom supprimés)")
+            except Exception as e:
+                logger.error(f"Impossible de charger la bannière de bienvenue: {e}")
+
         # Charger les salons de bienvenue en cache mémoire dès le démarrage
         if pool:
             try:
@@ -426,7 +459,7 @@ class NexusBot(discord.Client):
                     return
 
                 try:
-                    await role.delete(reason="Shield Protection: création de rôle non autorisée")
+                    await role.delete(reason="OZR Panel: création de rôle non autorisée")
                 except Exception as e:
                     logger.error(f"Failed to delete role {role.name}: {e}")
                     await log_to_db('error', f'Failed to delete role {role.name}: {e}')
@@ -509,7 +542,7 @@ class NexusBot(discord.Client):
                     return
 
                 try:
-                    await channel.delete(reason="Shield Protection: création de salon non autorisée")
+                    await channel.delete(reason="OZR Panel: création de salon non autorisée")
                 except Exception as e:
                     logger.error(f"Failed to delete channel {channel.name}: {e}")
 
@@ -613,7 +646,7 @@ class NexusBot(discord.Client):
                             break
 
                         try:
-                            await after.edit(overwrites=before.overwrites, reason="Shield Protection: modification de permissions non autorisée")
+                            await after.edit(overwrites=before.overwrites, reason="OZR Panel: modification de permissions non autorisée")
                         except Exception:
                             pass
 
@@ -732,7 +765,7 @@ class NexusBot(discord.Client):
                     return
 
                 try:
-                    await guild.unban(user, reason="Shield Protection: bannissement non autorisé")
+                    await guild.unban(user, reason="OZR Panel: bannissement non autorisé")
                 except Exception:
                     pass
 
@@ -776,7 +809,7 @@ class NexusBot(discord.Client):
                     return
 
                 try:
-                    await guild.ban(user, reason="Shield Protection: débannissement non autorisé")
+                    await guild.ban(user, reason="OZR Panel: débannissement non autorisé")
                 except Exception:
                     pass
 
@@ -840,7 +873,7 @@ class NexusBot(discord.Client):
                     webhooks = await channel.webhooks()
                     for wh in webhooks:
                         if wh.user and wh.user.id == user.id:
-                            await wh.delete(reason="Shield Protection: création de webhook non autorisée")
+                            await wh.delete(reason="OZR Panel: création de webhook non autorisée")
                 except Exception:
                     pass
 
@@ -905,9 +938,13 @@ class NexusBot(discord.Client):
                                 color=0x2b2d31,
                             )
                             embed.set_thumbnail(url=member.display_avatar.url)
-                            embed.set_image(url="attachment://bienvenue_cropped.png")
-                            banner_file = discord.File("attached_assets/bienvenue_cropped.png", filename="bienvenue_cropped.png")
-                            await welcome_ch.send(file=banner_file, embed=embed)
+                            if _welcome_banner_bytes:
+                                import io
+                                banner_file = discord.File(io.BytesIO(_welcome_banner_bytes), filename="bienvenue.png")
+                                embed.set_image(url="attachment://bienvenue.png")
+                                await welcome_ch.send(file=banner_file, embed=embed)
+                            else:
+                                await welcome_ch.send(embed=embed)
                             logger.info(f"Welcome embed sent for {member} in #{welcome_ch.name}")
                         except discord.Forbidden:
                             logger.error(f"Permission manquante pour envoyer dans #{welcome_ch.name} ({member.guild.name}) — vérifie que le bot a 'Envoyer des messages' et 'Intégrer des liens'")
@@ -940,7 +977,7 @@ class NexusBot(discord.Client):
                         return
 
                     try:
-                        await member.kick(reason="Shield Protection: ajout de bot non autorisé")
+                        await member.kick(reason="OZR Panel: ajout de bot non autorisé")
                     except Exception:
                         pass
 
@@ -1104,7 +1141,7 @@ class NexusBot(discord.Client):
                             return
 
                         try:
-                            await member.edit(mute=False, reason="Shield Protection: mise en muet non autorisée")
+                            await member.edit(mute=False, reason="OZR Panel: mise en muet non autorisée")
                         except Exception:
                             pass
 
@@ -1145,7 +1182,7 @@ class NexusBot(discord.Client):
                 if added:
                     for emoji in added:
                         try:
-                            await emoji.delete(reason="Shield Protection: modification d'emoji non autorisée")
+                            await emoji.delete(reason="OZR Panel: modification d'emoji non autorisée")
                         except Exception:
                             pass
 
@@ -1238,7 +1275,7 @@ class NexusBot(discord.Client):
                                 break
 
                             try:
-                                await after.edit(permissions=before.permissions, reason="Shield Protection: permission dangereuse bloquée")
+                                await after.edit(permissions=before.permissions, reason="OZR Panel: permission dangereuse bloquée")
                             except Exception:
                                 pass
 
@@ -1277,7 +1314,7 @@ class NexusBot(discord.Client):
                         permissions=before.permissions,
                         name=before.name,
                         color=before.color,
-                        reason="Shield Protection: modification non autorisée"
+                        reason="OZR Panel: modification non autorisée"
                     )
                 except Exception as e:
                     logger.error(f"Failed to restore role {after.name}: {e}")
@@ -1351,7 +1388,7 @@ class NexusBot(discord.Client):
                             break
 
                         try:
-                            await after.timeout(None, reason="Shield Protection: exclusion temporaire non autorisée")
+                            await after.timeout(None, reason="OZR Panel: exclusion temporaire non autorisée")
                         except Exception:
                             pass
 
@@ -1398,7 +1435,7 @@ class NexusBot(discord.Client):
                     if removed_roles:
                         safe_to_add = [r for r in removed_roles if r < guild.me.top_role]
                         if safe_to_add:
-                            await after.add_roles(*safe_to_add, reason="Shield Protection: retrait de rôle non autorisé")
+                            await after.add_roles(*safe_to_add, reason="OZR Panel: retrait de rôle non autorisé")
                 except Exception as e:
                     logger.error(f"Failed to restore member roles for {after}: {e}")
                     await log_to_db('error', f'Failed to restore member roles for {after}: {e}')
@@ -1439,7 +1476,7 @@ class NexusBot(discord.Client):
                     if member:
                         try:
                             from datetime import timedelta
-                            await member.timeout(timedelta(minutes=5), reason="Shield Protection: spam ping du bot")
+                            await member.timeout(timedelta(minutes=5), reason="OZR Panel: spam ping du bot")
                             embed = discord.Embed(description=f"{user.mention} a été timeout 5 minutes pour spam ping du bot.", color=0x2b2d31)
                             await message.channel.send(embed=embed)
                             await log_to_db('warn', f'{user} timed out for bot ping spam in {message.guild.name}')
@@ -1485,11 +1522,13 @@ class NexusBot(discord.Client):
                     except Exception:
                         pass
 
-                    # Remplacer le lien par des caractères barrés dans le chat (pas d'embed)
-                    raw_link = f"discord.gg/{invite_code}"
-                    struck = "".join(c + "\u0336" for c in raw_link)
-                    censored_content = message.content
-                    censored_content = discord_invite_pattern.sub(struck, censored_content)
+                    # Remplacer le lien par des caractères aléatoires dans le chat
+                    import random, string
+                    chars = string.ascii_letters + string.digits + "%&#@!$"
+                    def rand_replace(m):
+                        length = len(m.group(0))
+                        return "".join(random.choices(chars, k=length))
+                    censored_content = discord_invite_pattern.sub(rand_replace, message.content)
 
                     try:
                         await message.channel.send(f"{user.mention}: {censored_content}")
@@ -1499,7 +1538,7 @@ class NexusBot(discord.Client):
                     # Kick silencieux
                     if member_obj:
                         try:
-                            await message.guild.kick(member_obj, reason="Shield Protection: lien Discord interdit")
+                            await message.guild.kick(member_obj, reason="OZR Panel: lien Discord interdit")
                         except Exception as e:
                             logger.error(f"Failed to kick {user} for Discord invite: {e}")
 
@@ -2006,13 +2045,13 @@ async def apply_punishment(guild, user, protection_key):
 
     try:
         if punishment == 'ban':
-            await guild.ban(member, reason=f"Shield Protection: {protection_key}")
+            await guild.ban(member, reason=f"OZR Panel: {protection_key}")
         elif punishment == 'kick':
-            await guild.kick(member, reason=f"Shield Protection: {protection_key}")
+            await guild.kick(member, reason=f"OZR Panel: {protection_key}")
         elif punishment == 'derank':
             roles_to_remove = [r for r in member.roles if r != guild.default_role and r < guild.me.top_role]
             if roles_to_remove:
-                await member.remove_roles(*roles_to_remove, reason=f"Shield Protection: {protection_key}")
+                await member.remove_roles(*roles_to_remove, reason=f"OZR Panel: {protection_key}")
         elif punishment == 'timeout':
             from datetime import timedelta
             duration_str = prot['timeout_duration'] if prot and prot.get('timeout_duration') else '1h'
@@ -2025,7 +2064,7 @@ async def apply_punishment(guild, user, protection_key):
                 '1w': timedelta(weeks=1),
             }
             duration = duration_map.get(duration_str, timedelta(hours=1))
-            await member.timeout(duration, reason=f"Shield Protection: {protection_key}")
+            await member.timeout(duration, reason=f"OZR Panel: {protection_key}")
     except Exception as e:
         logger.error(f"Failed to apply punishment {punishment} to {user}: {e}")
         await log_to_db('error', f'Failed to apply punishment {punishment} to {user}: {e}')
@@ -5053,7 +5092,6 @@ async def info_command(interaction: discord.Interaction):
 
 
 @bot.tree.command(name="reception", description="Configurer ce salon comme salon de bienvenue automatique.")
-@app_commands.default_permissions(administrator=True)
 async def reception_command(interaction: discord.Interaction):
     try:
         if interaction.guild is None:
