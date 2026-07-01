@@ -5342,12 +5342,20 @@ async def contact_command(interaction: discord.Interaction):
             f"→ *Entretien avec la Direction*"
         )
 
-        embed = discord.Embed(
-            description=description,
-            color=0x000000,
-        )
+        contact_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "quicontacter.png")
+        contact_file = discord.File(contact_path, filename="quicontacter.png")
 
-        await interaction.channel.send(embed=embed)
+        class ContactLayoutView(discord.ui.LayoutView):
+            container = discord.ui.Container(
+                discord.ui.MediaGallery(
+                    discord.MediaGalleryItem("attachment://quicontacter.png")
+                ),
+                discord.ui.Separator(),
+                discord.ui.TextDisplay(description),
+                accent_colour=0x000000,
+            )
+
+        await interaction.channel.send(view=ContactLayoutView(), file=contact_file)
         await interaction.followup.send("✅ Guide des contacts envoyé.", ephemeral=True)
         await log_to_db('info', f'/contact used by {interaction.user} in #{interaction.channel}')
     except Exception as e:
@@ -5392,10 +5400,6 @@ async def info_command(interaction: discord.Interaction):
             "• 💸 **Boutique** • Achats & soutiens\n"
             "• 📖 **Wiki PoudlardRP** • Documentation\n"
             "• 📋 **Règlement serveur (doc)** • Règles et procédures\n\n"
-
-            "⚠️ **PRÉVENTION**\n"
-            "• ⚠️ Les Discords joueurs ne sont pas affiliés à Orizon Poudlard.\n"
-            "• ⚠️ Toute création de Discord sans autorisation peut entraîner des sanctions.\n\n"
 
             f"-# Orizon Poudlard • Liens Serveur | {now}"
         )
