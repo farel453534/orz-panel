@@ -36,43 +36,18 @@ _CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.
 
 
 def _try_load_banner():
-    import io
-    from PIL import Image
     _base = os.path.dirname(os.path.abspath(__file__))
-    _cwd = os.getcwd()
-    candidates = [
-        os.path.join(_cwd, "bienvenue.png"),
-        os.path.join(_base, "bienvenue.png"),
-        os.path.join(_cwd, "assets", "bienvenue.png"),
-        os.path.join(_base, "assets", "bienvenue.png"),
-        os.path.join(_base, "attached_assets", "bienvenue_cropped.png"),
-    ]
-    # Dédoublonner tout en gardant l'ordre
-    seen, candidates = set(), [p for p in candidates if not (p in seen or seen.add(p))]
-    found = next((p for p in candidates if os.path.exists(p)), None)
-    logger.info(f"Recherche bannière — CWD: {_cwd}, BASE: {_base}, trouvé: {found}")
-    if not found:
+    path = os.path.join(_base, "bienvenue.png")
+    if not os.path.exists(path):
+        logger.warning(f"bienvenue.png introuvable à {path}")
         return None
     try:
-        img = Image.open(found).convert("RGB")
-        top, bottom = 0, img.height - 1
-        while top < img.height:
-            row = [img.getpixel((x, top)) for x in range(0, img.width, max(1, img.width // 50))]
-            if any(r < 240 or g < 240 or b < 240 for r, g, b in row):
-                break
-            top += 1
-        while bottom > top:
-            row = [img.getpixel((x, bottom)) for x in range(0, img.width, max(1, img.width // 50))]
-            if any(r < 240 or g < 240 or b < 240 for r, g, b in row):
-                break
-            bottom -= 1
-        cropped = img.crop((0, top, img.width, bottom + 1))
-        buf = io.BytesIO()
-        cropped.save(buf, format="PNG")
-        logger.info(f"Bannière chargée: {found} ({top}px haut / {img.height - bottom - 1}px supprimés)")
-        return buf.getvalue()
+        with open(path, "rb") as f:
+            data = f.read()
+        logger.info(f"Bannière chargée ({len(data)} bytes) depuis {path}")
+        return data
     except Exception as e:
-        logger.error(f"Erreur chargement bannière {found}: {e}")
+        logger.error(f"Erreur lecture bienvenue.png: {e}")
         return None
 
 
