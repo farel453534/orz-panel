@@ -314,6 +314,16 @@ class NexusCommandTree(app_commands.CommandTree):
             return True
         if interaction.guild is None:
             return True
+
+        # Bot owner et owner du serveur passent toujours
+        if interaction.user.id == BOT_OWNER_ID or interaction.user.id == interaction.guild.owner_id:
+            return True
+
+        # Admin du serveur passe toujours (fallback si DB indispo)
+        member = interaction.guild.get_member(interaction.user.id)
+        if member and member.guild_permissions.administrator:
+            return True
+
         try:
             allowed = await asyncio.wait_for(
                 is_owner_or_ownerlist(interaction.guild, interaction.user.id),
@@ -354,18 +364,41 @@ class NexusBot(discord.Client):
 
         await self.change_presence(status=discord.Status.online, activity=None)
 
-        # Charger la bannière de bienvenue depuis le fichier local
+        # Charger et rogner la bannière de bienvenue (cherche dans plusieurs emplacements)
         global _welcome_banner_bytes
-        _banner_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "bienvenue.png")
-        if os.path.exists(_banner_path):
+        _base = os.path.dirname(os.path.abspath(__file__))
+        _candidate_paths = [
+            os.path.join(_base, "bienvenue.png"),
+            os.path.join(_base, "assets", "bienvenue.png"),
+            os.path.join(_base, "attached_assets", "bienvenue_cropped.png"),
+            os.path.join(_base, "attached_assets", "Bienvenue_(1)_1782864806413.png"),
+        ]
+        _found = next((p for p in _candidate_paths if os.path.exists(p)), None)
+        if _found:
             try:
-                with open(_banner_path, "rb") as f:
-                    _welcome_banner_bytes = f.read()
-                logger.info("Bannière de bienvenue chargée depuis assets/bienvenue.png")
+                import io
+                from PIL import Image
+                img = Image.open(_found).convert("RGB")
+                top, bottom = 0, img.height - 1
+                while top < img.height:
+                    row = [img.getpixel((x, top)) for x in range(0, img.width, max(1, img.width // 50))]
+                    if any(r < 240 or g < 240 or b < 240 for r, g, b in row):
+                        break
+                    top += 1
+                while bottom > top:
+                    row = [img.getpixel((x, bottom)) for x in range(0, img.width, max(1, img.width // 50))]
+                    if any(r < 240 or g < 240 or b < 240 for r, g, b in row):
+                        break
+                    bottom -= 1
+                cropped = img.crop((0, top, img.width, bottom + 1))
+                buf = io.BytesIO()
+                cropped.save(buf, format="PNG")
+                _welcome_banner_bytes = buf.getvalue()
+                logger.info(f"Bannière chargée depuis {_found} ({top}px haut / {img.height - bottom - 1}px bas supprimés)")
             except Exception as e:
                 logger.error(f"Impossible de charger la bannière de bienvenue: {e}")
         else:
-            logger.warning("assets/bienvenue.png introuvable, embed sans image")
+            logger.warning("Aucune bannière de bienvenue trouvée, embed sans image")
 
         # Charger les salons de bienvenue en cache mémoire dès le démarrage
         if pool:
