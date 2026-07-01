@@ -960,11 +960,12 @@ class NexusBot(discord.Client):
                         embed = discord.Embed(
                             title="👋 Bienvenue sur Orizon・Poudlard",
                             description=(
-                                "Pense à lire les <#1521534040023498832> "
+                                "Pense à lire les <#1521534040023498832>\n"
                                 "et à consulter <#1521534041386516631> pour bien commencer !"
                             ),
                             color=0x2b2d31,
                         )
+                        embed.set_thumbnail(url=member.display_avatar.url)
                         # Tentative d'ajout de la bannière — sans bloquer l'envoi si ça échoue
                         banner_file = None
                         try:
