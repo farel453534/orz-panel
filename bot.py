@@ -32,6 +32,33 @@ pool = None
 # Cache mémoire pour les salons de bienvenue (indépendant de la DB)
 _welcome_channel_cache = {}  # guild_id (int) -> channel_id (int)
 _welcome_banner_bytes = None  # bytes de l'image rognée, chargée au démarrage
+_CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+
+
+def _load_config():
+    try:
+        if os.path.exists(_CONFIG_FILE):
+            import json
+            with open(_CONFIG_FILE, "r") as f:
+                data = json.load(f)
+            for k, v in data.get("welcome_channels", {}).items():
+                _welcome_channel_cache[int(k)] = int(v)
+            logger.info(f"Config chargée: {len(_welcome_channel_cache)} salon(s) de bienvenue")
+    except Exception as e:
+        logger.error(f"Erreur chargement config.json: {e}")
+
+
+def _save_config():
+    try:
+        import json
+        data = {"welcome_channels": {str(k): v for k, v in _welcome_channel_cache.items()}}
+        with open(_CONFIG_FILE, "w") as f:
+            json.dump(data, f, indent=2)
+    except Exception as e:
+        logger.error(f"Erreur sauvegarde config.json: {e}")
+
+
+_load_config()
 
 
 async def init_db():
@@ -5114,6 +5141,7 @@ async def reception_command(interaction: discord.Interaction):
 
         await interaction.response.defer(ephemeral=True)
         _welcome_channel_cache[interaction.guild.id] = interaction.channel.id
+        _save_config()
         try:
             await set_guild_setting(interaction.guild.id, 'welcome_channel_id', interaction.channel.id)
         except Exception:
