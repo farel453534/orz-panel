@@ -5158,33 +5158,35 @@ async def info_command(interaction: discord.Interaction):
 
 @bot.tree.command(name="reception", description="Configurer ce salon comme salon de bienvenue automatique.")
 async def reception_command(interaction: discord.Interaction):
-    try:
-        if interaction.guild is None:
-            await interaction.response.send_message("❌ Cette commande doit être utilisée sur un serveur.", ephemeral=True)
-            return
+    if interaction.guild is None:
+        await interaction.response.send_message("❌ Cette commande doit être utilisée sur un serveur.", ephemeral=True)
+        return
 
-        await interaction.response.defer(ephemeral=True)
+    await interaction.response.defer(ephemeral=True)
+
+    try:
         _welcome_channel_cache[interaction.guild.id] = interaction.channel.id
+    except Exception:
+        pass
+    try:
         _save_config()
-        try:
-            await set_guild_setting(interaction.guild.id, 'welcome_channel_id', interaction.channel.id)
-        except Exception:
-            pass
-        await interaction.followup.send(
-            f"✅ Salon de bienvenue configuré : {interaction.channel.mention}\n"
-            "Le bot enverra automatiquement le message de bienvenue à chaque nouveau membre.",
-            ephemeral=True
-        )
-        try:
-            await log_to_db('info', f'/reception configured by {interaction.user} -> #{interaction.channel}')
-        except Exception:
-            pass
-    except Exception as e:
-        logger.error(f"Error in /reception command: {traceback.format_exc()}")
-        try:
-            await interaction.followup.send("❌ Une erreur est survenue.", ephemeral=True)
-        except Exception:
-            pass
+    except Exception:
+        pass
+    try:
+        await set_guild_setting(interaction.guild.id, 'welcome_channel_id', interaction.channel.id)
+    except Exception:
+        pass
+
+    await interaction.followup.send(
+        f"✅ Salon de bienvenue configuré : {interaction.channel.mention}\n"
+        "Le bot enverra automatiquement le message de bienvenue à chaque nouveau membre.",
+        ephemeral=True
+    )
+
+    try:
+        await log_to_db('info', f'/reception configured by {interaction.user} -> #{interaction.channel}')
+    except Exception:
+        pass
 
 
 DISCORDUP_SEPARATOR = "▬▬▬▬▬▬▬▬"
