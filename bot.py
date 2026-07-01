@@ -5118,10 +5118,10 @@ class RecrutementPanelLayout(discord.ui.LayoutView):
             "### Postes disponibles\n"
             "🛡️ **Modérateur** — Faire respecter les règles et gérer les conflits.\n"
             "🎉 **Animateur** — Organiser des événements et animer la communauté.\n"
-            "🎲 **Maître du Jeu** — Diriger des sessions de jeu de rôle.\n"
+            "🎲 **Maître du Jeu** — Diriger des trames et aide les joueurs dans leurs RP.\n"
             "📣 **Community Manager** — Gérer la communication et les réseaux.\n"
             "🎨 **Graphiste** — Créer des visuels pour le serveur.\n"
-            "⚙️ **Équipe Technique** — Gérer la partie technique du serveur."
+            "⚙️ **Équipe Technique** — Rejoindre l'équipe technique du serveur."
         ))
         container.add_item(discord.ui.Separator())
         container.add_item(discord.ui.TextDisplay(
