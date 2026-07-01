@@ -5400,12 +5400,20 @@ async def info_command(interaction: discord.Interaction):
             f"-# Orizon Poudlard • Liens Serveur | {now}"
         )
 
-        embed = discord.Embed(
-            description=description,
-            color=0x000000,
-        )
+        info_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "informations.png")
+        info_file = discord.File(info_path, filename="informations.png")
 
-        await interaction.channel.send(embed=embed)
+        class InfoLayoutView(discord.ui.LayoutView):
+            container = discord.ui.Container(
+                discord.ui.MediaGallery(
+                    discord.MediaGalleryItem("attachment://informations.png")
+                ),
+                discord.ui.Separator(),
+                discord.ui.TextDisplay(description),
+                accent_colour=0x000000,
+            )
+
+        await interaction.channel.send(view=InfoLayoutView(), file=info_file)
         await interaction.followup.send("✅ Panel d'informations envoyé.", ephemeral=True)
         await log_to_db('info', f'/info used by {interaction.user} in #{interaction.channel}')
     except Exception as e:
