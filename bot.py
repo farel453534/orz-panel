@@ -4231,65 +4231,116 @@ async def help_command(interaction: discord.Interaction):
             pass
 
 
+# --- Rôles ---
+ROLE_RESP_MODO = 1521523529814900897      # Responsable Modération
+ROLE_ADMIN = 1521523276315099309          # Administrateur
+ROLE_MODO = 1521524596199788554           # Modérateur
+ROLE_ANIMATEUR = 1521524656782442536      # Animateur
+ROLE_MJ = 1521524695751462963             # Maître du Jeux
+ROLE_RESP_ANIM_MJ = 1521523603265556600   # Responsable Animation/MJ
+ROLE_GERANT_RP = 1521523237383835718      # Gérant RP (aussi rôle entretien gérance)
+ROLE_EG_1 = 1521523168659898573           # Entretien Gérance (rôle 1)
+ROLE_RESPONSABLE = 1521498188148768809    # Responsable (direction / boutique)
+ROLE_COORDINATEUR = 1521523197764305130   # Coordinateur (direction / boutique)
+
+# --- Catégories ---
+CAT_MODO_ADMIN = 1521697975901097994      # BDA, Bug, Plainte Staff, Déban, Autres
+CAT_ANIM_RP = 1521698472976453795         # Animation/MJ, RPK, Gérant RP
+CAT_DIR_GER = 1521698072101654679         # Entretiens Gérance/Direction, Boutique, Remboursement
+
+# Chaque type de ticket porte sa propre config :
+#   category_id  : catégorie où le salon est créé
+#   claim_roles  : rôles qui reçoivent le MP et peuvent claim le ticket
+#   view_roles   : rôles ayant accès (visibilité) au salon du ticket
+#   auto_create  : True = salon créé immédiatement (sans MP), un rôle vient le claim
 TICKET_TYPES = {
-    "bda": {"label": "Besoin d'aide (BDA)", "short": "bda", "emoji": "🆘", "category_key": "moderation"},
-    "bug": {"label": "Report de Bug", "short": "bug", "emoji": "🐞", "category_key": "moderation"},
-    "amj": {"label": "Demande pour l'Animation/Maître du Jeux", "short": "amj", "emoji": "🎲", "category_key": "animation"},
-    "ps": {"label": "Plainte Staff", "short": "ps", "emoji": "📣", "category_key": "administration"},
-    "ddb": {"label": "Demande de déban", "short": "ddb", "emoji": "🔓", "category_key": "administration"},
-    "rpk": {"label": "Demande de RPK", "short": "rpk", "emoji": "⚔️", "category_key": "gerance"},
-    "grp": {"label": "Ticket Gérant RP", "short": "grp", "emoji": "🎭", "category_key": "gerance"},
-    "eg": {"label": "Entretien avec la Gérance", "short": "eg", "emoji": "💼", "category_key": "gerance"},
-    "autre": {"label": "Autres", "short": "autre", "emoji": "❓", "category_key": "gerance"},
-    "rb": {"label": "Demande de Remboursement", "short": "rb", "emoji": "💸", "category_key": "direction"},
-    "pbq": {"label": "Problème avec la boutique", "short": "pbq", "emoji": "🛒", "category_key": "direction"},
-    "ed": {"label": "Entretien avec la Direction", "short": "ed", "emoji": "🏛️", "category_key": "direction"},
+    "bda": {
+        "label": "Besoin d'aide (BDA)", "short": "bda", "emoji": "🆘",
+        "category_id": CAT_MODO_ADMIN,
+        "claim_roles": [ROLE_MODO, ROLE_RESP_MODO, ROLE_ADMIN],
+        "view_roles": [ROLE_MODO, ROLE_RESP_MODO, ROLE_ADMIN],
+        "auto_create": False,
+    },
+    "bug": {
+        "label": "Report de Bug", "short": "bug", "emoji": "🐞",
+        "category_id": CAT_MODO_ADMIN,
+        "claim_roles": [ROLE_MODO, ROLE_RESP_MODO, ROLE_ADMIN],
+        "view_roles": [ROLE_MODO, ROLE_RESP_MODO, ROLE_ADMIN],
+        "auto_create": False,
+    },
+    "amj": {
+        "label": "Demande pour l'Animation/Maître du Jeux", "short": "amj", "emoji": "🎲",
+        "category_id": CAT_ANIM_RP,
+        "claim_roles": [ROLE_ANIMATEUR, ROLE_MJ],
+        "view_roles": [ROLE_ANIMATEUR, ROLE_MJ, ROLE_RESP_ANIM_MJ],
+        "auto_create": False,
+    },
+    "ps": {
+        "label": "Plainte Staff", "short": "ps", "emoji": "📣",
+        "category_id": CAT_MODO_ADMIN,
+        "claim_roles": [ROLE_RESP_MODO, ROLE_ADMIN],
+        "view_roles": [ROLE_RESP_MODO, ROLE_ADMIN],
+        "auto_create": False,
+    },
+    "ddb": {
+        "label": "Demande de déban", "short": "ddb", "emoji": "🔓",
+        "category_id": CAT_MODO_ADMIN,
+        "claim_roles": [ROLE_RESP_MODO, ROLE_ADMIN],
+        "view_roles": [ROLE_RESP_MODO, ROLE_ADMIN],
+        "auto_create": False,
+    },
+    "rpk": {
+        "label": "Demande de RPK", "short": "rpk", "emoji": "⚔️",
+        "category_id": CAT_ANIM_RP,
+        "claim_roles": [ROLE_GERANT_RP, ROLE_ADMIN],
+        "view_roles": [ROLE_GERANT_RP, ROLE_ADMIN],
+        "auto_create": False,
+    },
+    "grp": {
+        "label": "Ticket Gérant RP", "short": "grp", "emoji": "🎭",
+        "category_id": CAT_ANIM_RP,
+        "claim_roles": [ROLE_GERANT_RP],
+        "view_roles": [ROLE_GERANT_RP],
+        "auto_create": False,
+    },
+    "eg": {
+        "label": "Entretien avec la Gérance", "short": "eg", "emoji": "💼",
+        "category_id": CAT_DIR_GER,
+        "claim_roles": [ROLE_EG_1, ROLE_GERANT_RP],
+        "view_roles": [ROLE_EG_1, ROLE_GERANT_RP],
+        "auto_create": False,
+    },
+    "autre": {
+        "label": "Autres", "short": "autre", "emoji": "❓",
+        "category_id": CAT_MODO_ADMIN,
+        "claim_roles": [ROLE_MODO, ROLE_RESP_MODO, ROLE_ADMIN],
+        "view_roles": [ROLE_MODO, ROLE_RESP_MODO, ROLE_ADMIN],
+        "auto_create": False,
+    },
+    "rb": {
+        "label": "Demande de Remboursement", "short": "rb", "emoji": "💸",
+        "category_id": CAT_DIR_GER,
+        "claim_roles": [ROLE_RESPONSABLE, ROLE_COORDINATEUR],
+        "view_roles": [ROLE_RESPONSABLE, ROLE_COORDINATEUR],
+        "auto_create": True,
+    },
+    "pbq": {
+        "label": "Problème avec la boutique", "short": "pbq", "emoji": "🛒",
+        "category_id": CAT_DIR_GER,
+        "claim_roles": [ROLE_RESPONSABLE, ROLE_COORDINATEUR],
+        "view_roles": [ROLE_RESPONSABLE, ROLE_COORDINATEUR],
+        "auto_create": True,
+    },
+    "ed": {
+        "label": "Entretien avec la Direction", "short": "ed", "emoji": "🏛️",
+        "category_id": CAT_DIR_GER,
+        "claim_roles": [ROLE_RESPONSABLE, ROLE_COORDINATEUR],
+        "view_roles": [ROLE_RESPONSABLE, ROLE_COORDINATEUR],
+        "auto_create": True,
+    },
 }
 
 TICKET_ORDER = ["bda", "rb", "rpk", "grp", "pbq", "ddb", "ps", "bug", "amj", "ed", "eg", "autre"]
-
-ROLE_ADMIN = 1500214818936848534
-ROLE_GERANCE = 1500213826107343039
-ROLE_RESP_MOD = 1500216689093251174
-ROLE_RESP_ANIM = 1500216707883597854
-
-CATEGORY_CONFIG = {
-    "moderation": {
-        "primary_role": 1500212869243998239,
-        "category_id": 1500213318491705455,
-        "extra_view_roles": [ROLE_ADMIN, ROLE_RESP_MOD, ROLE_GERANCE],
-        "auto_create": False,
-        "open_to_primary_role": False,
-    },
-    "animation": {
-        "primary_role": 1500216204747608164,
-        "category_id": 1500216301535363172,
-        "extra_view_roles": [ROLE_ADMIN, ROLE_RESP_ANIM, ROLE_GERANCE],
-        "auto_create": False,
-        "open_to_primary_role": False,
-    },
-    "administration": {
-        "primary_role": ROLE_ADMIN,
-        "category_id": 1500213926502338560,
-        "extra_view_roles": [ROLE_GERANCE],
-        "auto_create": False,
-        "open_to_primary_role": True,
-    },
-    "gerance": {
-        "primary_role": ROLE_GERANCE,
-        "category_id": 1500213926502338560,
-        "extra_view_roles": [],
-        "auto_create": False,
-        "open_to_primary_role": True,
-    },
-    "direction": {
-        "primary_role": 1500215064177934507,
-        "category_id": 1500215169999966248,
-        "extra_view_roles": [],
-        "auto_create": True,
-        "open_to_primary_role": False,
-    },
-}
 
 
 def make_short_name(member):
@@ -4445,11 +4496,8 @@ async def handle_close_ticket(interaction: discord.Interaction, ticket_id: int):
             await interaction.followup.send("❌ Type de ticket invalide.", ephemeral=True)
             return
 
-        config = CATEGORY_CONFIG[ticket_info['category_key']]
-        allowed_role_ids = {ROLE_ADMIN, ROLE_GERANCE}
-        allowed_role_ids.add(config['primary_role'])
-        for r in config.get('extra_view_roles', []):
-            allowed_role_ids.add(r)
+        config = ticket_info
+        allowed_role_ids = set(config.get('view_roles', [])) | set(config.get('claim_roles', []))
 
         member_role_ids = {r.id for r in getattr(member, 'roles', [])}
         if not (allowed_role_ids & member_role_ids):
@@ -4556,7 +4604,7 @@ async def handle_ticket_creation(interaction: discord.Interaction, ticket_type_k
         if not ticket_info:
             await interaction.followup.send("❌ Type de ticket inconnu.", ephemeral=True)
             return
-        config = CATEGORY_CONFIG[ticket_info["category_key"]]
+        config = ticket_info
 
         if not pool:
             await interaction.followup.send("❌ Base de données indisponible.", ephemeral=True)
@@ -4596,7 +4644,7 @@ async def handle_ticket_creation(interaction: discord.Interaction, ticket_type_k
                 str(channel.id), ticket_id
             )
             await interaction.followup.send(
-                f"✅ Votre ticket a été créé : {channel.mention}\nUn membre de la direction viendra vous répondre.",
+                f"✅ Votre ticket a été créé : {channel.mention}\nUn membre du staff viendra vous répondre.",
                 ephemeral=True
             )
             await log_to_db('info', f'Ticket #{ticket_id} ({ticket_info["label"]}) auto-created by {user} in {guild.name}')
@@ -4610,17 +4658,18 @@ async def handle_ticket_creation(interaction: discord.Interaction, ticket_type_k
             log_embed.add_field(name="Type", value=ticket_info['label'], inline=True)
             log_embed.add_field(name="Salon", value=channel.mention, inline=True)
             log_embed.add_field(name="Demandeur", value=f"{user.mention} (`{user}`)", inline=False)
-            log_embed.add_field(name="Création", value="Automatique (catégorie direction)", inline=False)
+            log_embed.add_field(name="Création", value="Automatique", inline=False)
             try:
                 log_embed.set_thumbnail(url=user.display_avatar.url)
             except Exception:
                 pass
             await send_ticket_log(guild, log_embed)
         else:
-            primary_role = guild.get_role(config["primary_role"])
-            if not primary_role:
+            claim_roles = [guild.get_role(rid) for rid in config.get("claim_roles", [])]
+            claim_roles = [r for r in claim_roles if r]
+            if not claim_roles:
                 await pool.execute("UPDATE tickets SET status = 'closed' WHERE id = $1", ticket_id)
-                await interaction.followup.send("❌ Le rôle de modération est introuvable. Contactez un administrateur.", ephemeral=True)
+                await interaction.followup.send("❌ Les rôles de gestion sont introuvables. Contactez un administrateur.", ephemeral=True)
                 return
 
             embed = discord.Embed(
@@ -4652,7 +4701,7 @@ async def handle_ticket_creation(interaction: discord.Interaction, ticket_type_k
             log_embed.add_field(name="Type", value=ticket_info['label'], inline=True)
             log_embed.add_field(name="Statut", value="En attente de claim", inline=True)
             log_embed.add_field(name="Demandeur", value=f"{user.mention} (`{user}`)", inline=False)
-            log_embed.add_field(name="Rôle notifié", value=primary_role.mention, inline=False)
+            log_embed.add_field(name="Rôles notifiés", value=", ".join(r.mention for r in claim_roles), inline=False)
             try:
                 log_embed.set_thumbnail(url=user.display_avatar.url)
             except Exception:
@@ -4661,14 +4710,17 @@ async def handle_ticket_creation(interaction: discord.Interaction, ticket_type_k
 
             sent = 0
             failed = 0
-            for member in primary_role.members:
-                if member.bot:
-                    continue
-                try:
-                    await member.send(embed=embed, view=view)
-                    sent += 1
-                except Exception:
-                    failed += 1
+            notified = set()
+            for role in claim_roles:
+                for member in role.members:
+                    if member.bot or member.id in notified:
+                        continue
+                    notified.add(member.id)
+                    try:
+                        await member.send(embed=embed, view=view)
+                        sent += 1
+                    except Exception:
+                        failed += 1
 
             await interaction.followup.send(
                 f"✅ Votre demande de **{ticket_info['label']}** a bien été envoyée à l'équipe ({sent} membre(s) notifié(s)). Vous recevrez un MP dès qu'un membre du staff la prendra en charge.",
@@ -4718,7 +4770,7 @@ async def handle_claim(interaction: discord.Interaction, ticket_id: int):
         if not ticket_info:
             await interaction.followup.send("❌ Type de ticket inconnu.", ephemeral=True)
             return
-        config = CATEGORY_CONFIG[ticket_info['category_key']]
+        config = ticket_info
 
         member = guild.get_member(interaction.user.id)
         if not member:
@@ -4728,8 +4780,9 @@ async def handle_claim(interaction: discord.Interaction, ticket_id: int):
                 await interaction.followup.send("❌ Vous n'êtes pas membre du serveur.", ephemeral=True)
                 return
 
-        primary_role = guild.get_role(config['primary_role'])
-        if not primary_role or primary_role not in member.roles:
+        claim_role_ids = set(config.get('claim_roles', []))
+        member_role_ids = {r.id for r in getattr(member, 'roles', [])}
+        if not (claim_role_ids & member_role_ids):
             await interaction.followup.send("❌ Vous n'avez pas le rôle requis pour prendre ce ticket en charge.", ephemeral=True)
             return
 
@@ -4782,7 +4835,7 @@ async def handle_claim(interaction: discord.Interaction, ticket_id: int):
                 creator: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True, attach_files=True, embed_links=True),
                 member: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True, attach_files=True, embed_links=True, manage_messages=True),
             }
-            for role_id in config.get("extra_view_roles", []):
+            for role_id in config.get("view_roles", []):
                 role = guild.get_role(role_id)
                 if role:
                     new_overwrites[role] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True, attach_files=True, embed_links=True)
@@ -4899,17 +4952,7 @@ async def create_ticket_channel(guild, creator, ticket_info, config, ticket_id, 
     if claimer:
         overwrites[claimer] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True, attach_files=True, embed_links=True, manage_messages=True)
 
-    if config.get("auto_create") and not claimer:
-        primary_role = guild.get_role(config['primary_role'])
-        if primary_role:
-            overwrites[primary_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True, attach_files=True, embed_links=True)
-
-    if config.get("open_to_primary_role"):
-        primary_role = guild.get_role(config['primary_role'])
-        if primary_role:
-            overwrites[primary_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True, attach_files=True, embed_links=True)
-
-    for role_id in config.get("extra_view_roles", []):
+    for role_id in config.get("view_roles", []):
         role = guild.get_role(role_id)
         if role:
             overwrites[role] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True, attach_files=True, embed_links=True)
@@ -4948,8 +4991,8 @@ async def create_ticket_channel(guild, creator, ticket_info, config, ticket_id, 
             view.add_item(CloseTicketButton(ticket_id))
             await channel.send(content=f"{creator.mention} {claimer.mention}", embed=welcome_embed, view=view)
         else:
-            primary_role = guild.get_role(config['primary_role'])
-            ping = primary_role.mention if primary_role else ""
+            pings = [guild.get_role(rid) for rid in config.get('claim_roles', [])]
+            ping = " ".join(r.mention for r in pings if r)
             view = discord.ui.View(timeout=None)
             view.add_item(ClaimTicketButton(ticket_id))
             view.add_item(CloseTicketButton(ticket_id))
