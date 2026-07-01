@@ -5214,7 +5214,7 @@ async def handle_recrutement_creation(interaction: discord.Interaction, key: str
                 f"**Candidat :** {user.mention} (`{user}`)\n"
                 f"**Poste visé :** {info['label']}\n\n"
                 "━━━━━━━━━━━━━━━━━━━━━━\n"
-                "**📝 Pour postuler, réponds aux questions suivantes :**\n\n"
+                "**📝 Pour postuler, réponds aux questions suivantes ou fais nous part de ton imagination avec un canva, gdoc etc :**\n\n"
                 "**1.** Quel est ton âge ?\n"
                 "**2.** Depuis combien de temps es-tu sur le serveur ?\n"
                 "**3.** Pourquoi veux-tu rejoindre l'équipe ?\n"
