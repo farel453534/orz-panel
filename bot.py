@@ -4339,51 +4339,16 @@ TICKET_TYPES = {
     "bda": {
         "label": "Besoin d'aide (BDA)", "short": "bda", "emoji": "🆘",
         "category_id": CAT_MODO_ADMIN,
-        "claim_roles": [ROLE_MODO, ROLE_RESP_MODO, ROLE_ADMIN],
-        "view_roles": [ROLE_MODO, ROLE_RESP_MODO, ROLE_ADMIN],
-        "auto_create": False,
-    },
-    "bug": {
-        "label": "Report de Bug", "short": "bug", "emoji": "🐞",
-        "category_id": CAT_MODO_ADMIN,
-        "claim_roles": [ROLE_MODO, ROLE_RESP_MODO, ROLE_ADMIN],
-        "view_roles": [ROLE_MODO, ROLE_RESP_MODO, ROLE_ADMIN],
-        "auto_create": False,
-    },
-    "amj": {
-        "label": "Demande pour l'Animation/Maître du Jeux", "short": "amj", "emoji": "🎲",
-        "category_id": CAT_ANIM_RP,
-        "claim_roles": [ROLE_ANIMATEUR, ROLE_MJ],
-        "view_roles": [ROLE_ANIMATEUR, ROLE_MJ, ROLE_RESP_ANIM_MJ],
-        "auto_create": False,
-    },
-    "ps": {
-        "label": "Plainte Staff", "short": "ps", "emoji": "📣",
-        "category_id": CAT_MODO_ADMIN,
-        "claim_roles": [ROLE_RESP_MODO, ROLE_ADMIN],
-        "view_roles": [ROLE_RESP_MODO, ROLE_ADMIN],
+        "claim_roles": [ROLE_MODO],                          # seul rôle DM'd
+        "view_roles": [ROLE_MODO, ROLE_GERANT_RP],           # ROLE_GERANT_RP a accès sans être DM
         "auto_create": False,
     },
     "ddb": {
         "label": "Demande de déban", "short": "ddb", "emoji": "🔓",
         "category_id": CAT_MODO_ADMIN,
-        "claim_roles": [ROLE_RESP_MODO, ROLE_ADMIN],
-        "view_roles": [ROLE_RESP_MODO, ROLE_ADMIN],
-        "auto_create": False,
-    },
-    "grp": {
-        "label": "Ticket Gérant RP", "short": "grp", "emoji": "🎭",
-        "category_id": CAT_ANIM_RP,
         "claim_roles": [ROLE_GERANT_RP],
         "view_roles": [ROLE_GERANT_RP],
-        "auto_create": False,
-    },
-    "eg": {
-        "label": "Entretien avec la Gérance", "short": "eg", "emoji": "💼",
-        "category_id": CAT_DIR_GER,
-        "claim_roles": [ROLE_EG_1, ROLE_GERANT_RP],
-        "view_roles": [ROLE_EG_1, ROLE_GERANT_RP],
-        "auto_create": False,
+        "auto_create": True,                                  # salon créé directement, pas de DM
     },
     "autre": {
         "label": "Autres", "short": "autre", "emoji": "❓",
@@ -4417,7 +4382,7 @@ TICKET_TYPES = {
     },
 }
 
-TICKET_ORDER = ["bda", "rb", "grp", "pbq", "ddb", "ps", "bug", "amj", "ed", "eg", "autre"]
+TICKET_ORDER = ["bda", "rb", "pbq", "ddb", "ed", "autre"]
 
 
 def make_short_name(member):
