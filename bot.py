@@ -5506,7 +5506,7 @@ async def info_command(interaction: discord.Interaction):
             "• [Serveur Orizon - Minecraft](https://discord.gg/bHqUhQ3few)\n\n"
 
             "🔗 **LIENS IMPORTANTS**\n"
-            "• 🌐 **[orizon-community.fr](https://orizon-community.fr)** • Site internet\n"
+            "• 🌐 **[orizon-community.fr](https://www.orizon-community.fr)** • Site internet\n"
             "• 💸 **Boutique** • Achats & soutiens\n\n"
 
             f"-# Orizon Community | {now}"
