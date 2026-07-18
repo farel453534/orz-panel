@@ -5497,41 +5497,29 @@ async def info_command(interaction: discord.Interaction):
             "> Retrouvez l'ensemble de nos serveurs et liens clés.\n\n"
 
             "🌐 **SERVEURS DISCORDS GLOBAL**\n"
-            "• [PoudlardRP](https://discord.gg/GbUYFXKuTn) • Serveur principal\n\n"
+            "• [Orizon Community](https://discord.com/invite/5ZyN983mjk)\n\n"
 
             "🎓 **SERVEURS MAISONS**\n"
-            "• Serpentard\n"
-            "• Gryffondor\n"
-            "• Serdaigle\n"
-            "• Poufsouffle\n\n"
+            "• [Serveur Orizon - DarkRP](https://discord.gg/Sc53BbGknC)\n\n"
 
             "🌍 **SERVEURS MONDE**\n"
-            "• Monde Magique\n"
-            "• Mage Indépendant\n\n"
+            "• [Serveur Orizon - Minecraft](https://discord.gg/bHqUhQ3few)\n\n"
 
             "🔗 **LIENS IMPORTANTS**\n"
-            "• 🌐 **Portail Orizon Community** • Site internet\n"
-            "• 💸 **Boutique** • Achats & soutiens\n"
-            "• 📖 **Wiki PoudlardRP** • Documentation\n"
-            "• 📋 **Règlement serveur (doc)** • Règles et procédures\n\n"
+            "• 🌐 **[orizon-community.fr](https://orizon-community.fr)** • Site internet\n"
+            "• 💸 **Boutique** • Achats & soutiens\n\n"
 
-            f"-# Orizon Poudlard • Liens Serveur | {now}"
+            f"-# Orizon Community | {now}"
         )
-
-        info_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "informations.png")
-        info_file = discord.File(info_path, filename="informations.png")
 
         class InfoLayoutView(discord.ui.LayoutView):
             container = discord.ui.Container(
-                discord.ui.MediaGallery(
-                    discord.MediaGalleryItem("attachment://informations.png")
-                ),
                 discord.ui.Separator(),
                 discord.ui.TextDisplay(description),
                 accent_colour=0x000000,
             )
 
-        await interaction.channel.send(view=InfoLayoutView(), file=info_file)
+        await interaction.channel.send(view=InfoLayoutView())
         await interaction.followup.send("✅ Panel d'informations envoyé.", ephemeral=True)
         await log_to_db('info', f'/info used by {interaction.user} in #{interaction.channel}')
     except Exception as e:
