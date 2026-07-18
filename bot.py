@@ -4426,7 +4426,7 @@ class TicketPanelLayout(discord.ui.LayoutView):
         container = discord.ui.Container(accent_colour=0x0b1a3a)
 
         container.add_item(discord.ui.TextDisplay(
-            "## 🎫  Ouvrir un ticket auprès du staff"
+            "## 🎫  Ouvrir un ticket auprès de Orizon Community"
         ))
         container.add_item(discord.ui.Separator())
         container.add_item(discord.ui.TextDisplay(
@@ -4442,7 +4442,7 @@ class TicketPanelLayout(discord.ui.LayoutView):
         ))
         container.add_item(discord.ui.TextDisplay(
             "### ⏳ Information importante\n"
-            "» Pour les demandes d'entretien, les problèmes de boutique ou les autorisations RP, "
+            "» Pour les demandes d'entretien ou les problèmes de boutique, "
             "merci de faire preuve de patience : les délais de réponse peuvent varier."
         ))
         container.add_item(discord.ui.Separator())
@@ -4457,7 +4457,7 @@ class TicketPanelLayout(discord.ui.LayoutView):
 
         container.add_item(discord.ui.Separator())
         container.add_item(discord.ui.TextDisplay(
-            "-# Orizon • Poudlard | Tickets"
+            "-# Orizon Community | Tickets"
         ))
 
         self.add_item(container)
