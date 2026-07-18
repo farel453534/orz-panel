@@ -5499,10 +5499,10 @@ async def info_command(interaction: discord.Interaction):
             "🌐 **SERVEURS DISCORDS GLOBAL**\n"
             "• [Orizon Community](https://discord.com/invite/5ZyN983mjk)\n\n"
 
-            "🎓 **SERVEURS MAISONS**\n"
+            "🎮 **SERVEUR DARKRP**\n"
             "• [Serveur Orizon - DarkRP](https://discord.gg/Sc53BbGknC)\n\n"
 
-            "🌍 **SERVEURS MONDE**\n"
+            "⛏️ **SERVEUR MINECRAFT**\n"
             "• [Serveur Orizon - Minecraft](https://discord.gg/bHqUhQ3few)\n\n"
 
             "🔗 **LIENS IMPORTANTS**\n"
