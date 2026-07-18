@@ -5407,7 +5407,6 @@ async def contact_command(interaction: discord.Interaction):
             1521523197764305130,
             1521523168659898573,
             1521523237383835718,
-            1521523276315099309,
         ]
 
         def get_members_for_role(role_id):
@@ -5420,7 +5419,7 @@ async def contact_command(interaction: discord.Interaction):
             "**Respectez notre équipe !**",
             "Avant de contacter un membre en direct, ouvrez d'abord un ticket pour obtenir une réponse plus rapide.",
             "• Il est fortement déconseillé de tenter de MP <@&1521498188148768809>.",
-            "• Les membres de la Gérance (<@&1521523168659898573> et <@&1521523237383835718>) ne doivent pas être MP directement.",
+            "• Les membres de la Gérance (<@&1521523197764305130> et <@&1521523168659898573>) ne doivent pas être MP directement.",
             "• Privilégiez toujours le système des tickets.",
         ]
 
@@ -5456,20 +5455,14 @@ async def contact_command(interaction: discord.Interaction):
             f"→ *Entretien avec la Direction*"
         )
 
-        contact_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "quicontacter.png")
-        contact_file = discord.File(contact_path, filename="quicontacter.png")
-
         class ContactLayoutView(discord.ui.LayoutView):
             container = discord.ui.Container(
-                discord.ui.MediaGallery(
-                    discord.MediaGalleryItem("attachment://quicontacter.png")
-                ),
                 discord.ui.Separator(),
                 discord.ui.TextDisplay(description),
                 accent_colour=0x000000,
             )
 
-        await interaction.channel.send(view=ContactLayoutView(), file=contact_file)
+        await interaction.channel.send(view=ContactLayoutView())
         await interaction.followup.send("✅ Guide des contacts envoyé.", ephemeral=True)
         await log_to_db('info', f'/contact used by {interaction.user} in #{interaction.channel}')
     except Exception as e:
