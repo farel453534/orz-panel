@@ -5458,13 +5458,13 @@ async def info_command(interaction: discord.Interaction):
             "• [Orizon Community](https://discord.com/invite/5ZyN983mjk)\n\n"
 
             "🎮 **SERVEUR DARKRP**\n"
-            "• [Serveur Orizon - DarkRP](https://discord.gg/Sc53BbGknC)\n\n"
+            "• [Serveur Orizon - DarkRP](https://discord.gg/qNnZ2g5RDs)\n\n"
 
             "⛏️ **SERVEUR MINECRAFT**\n"
-            "• [Serveur Orizon - Minecraft](https://discord.gg/bHqUhQ3few)\n\n"
+            "• [Serveur Orizon - Minecraft](https://discord.gg/mBQV3hnDVc)\n\n"
 
             "🔗 **LIENS IMPORTANTS**\n"
-            "• 🌐 **[orizon-community.fr](https://www.orizon-community.fr)** • Site internet\n"
+            "• 🌐 **[Orizon-community.fr](https://www.orizon-community.fr)** • Site internet\n"
             "• 💸 **Boutique** • Achats & soutiens\n\n"
 
             f"-# Orizon Community | {now}"
