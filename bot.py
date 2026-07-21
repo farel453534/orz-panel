@@ -31,24 +31,7 @@ pool = None
 
 # Cache mémoire pour les salons de bienvenue (indépendant de la DB)
 _welcome_channel_cache = {}  # guild_id (int) -> channel_id (int)
-_welcome_banner_bytes = None  # bytes de l'image rognée, chargée au démarrage
 _CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
-
-
-def _try_load_banner():
-    _base = os.path.dirname(os.path.abspath(__file__))
-    path = os.path.join(_base, "bienvenue.png")
-    if not os.path.exists(path):
-        logger.warning(f"bienvenue.png introuvable à {path}")
-        return None
-    try:
-        with open(path, "rb") as f:
-            data = f.read()
-        logger.info(f"Bannière chargée ({len(data)} bytes) depuis {path}")
-        return data
-    except Exception as e:
-        logger.error(f"Erreur lecture bienvenue.png: {e}")
-        return None
 
 
 def _load_config():
@@ -406,14 +389,6 @@ class NexusBot(discord.Client):
         await log_to_db('info', f'Bot logged in as {self.user}')
 
         await self.change_presence(status=discord.Status.online, activity=None)
-
-        # Charger et rogner la bannière de bienvenue (cherche dans plusieurs emplacements)
-        global _welcome_banner_bytes
-        _welcome_banner_bytes = _try_load_banner()
-        if _welcome_banner_bytes:
-            logger.info("Bannière de bienvenue chargée avec succès")
-        else:
-            logger.warning("Aucune bannière de bienvenue trouvée, embed sans image")
 
         # Charger les salons de bienvenue en cache mémoire dès le démarrage
         if pool:
@@ -965,30 +940,17 @@ class NexusBot(discord.Client):
                             welcome_ch = None
                     if welcome_ch:
                         embed = discord.Embed(
-                            title="👋 Bienvenue sur Orizon・Poudlard",
+                            title="👋 Bienvenue sur Orizon・Community",
                             description=(
                                 "Pense à lire les <#1521534040023498832>\n"
-                                "et à consulter <#1521534041386516631> pour bien commencer !"
+                                "et à consulter <#1521534042368114839> pour bien commencer !"
                             ),
                             color=0x2b2d31,
                         )
                         embed.set_thumbnail(url=member.display_avatar.url)
-                        # Tentative d'ajout de la bannière — sans bloquer l'envoi si ça échoue
-                        banner_file = None
-                        try:
-                            import io
-                            banner = _welcome_banner_bytes or _try_load_banner()
-                            if banner:
-                                banner_file = discord.File(io.BytesIO(banner), filename="bienvenue.png")
-                                embed.set_image(url="attachment://bienvenue.png")
-                        except Exception as banner_err:
-                            logger.warning(f"Bannière ignorée: {banner_err}")
 
                         try:
-                            if banner_file:
-                                await welcome_ch.send(file=banner_file, embed=embed)
-                            else:
-                                await welcome_ch.send(embed=embed)
+                            await welcome_ch.send(embed=embed)
                             logger.info(f"Welcome embed sent for {member} in #{welcome_ch.name}")
                         except discord.Forbidden:
                             logger.error(f"Permission manquante dans #{welcome_ch.name} ({member.guild.name})")
