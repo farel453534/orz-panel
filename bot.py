@@ -940,7 +940,7 @@ class NexusBot(discord.Client):
                             welcome_ch = None
                     if welcome_ch:
                         embed = discord.Embed(
-                            title="👋 Bienvenue sur Orizon・Community",
+                            title=f"👋 Bienvenue {member.name} sur Orizon・Community",
                             description=(
                                 "Pense à lire les <#1521534040023498832>\n"
                                 "et à consulter <#1521534042368114839> pour bien commencer !"
