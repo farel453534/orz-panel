@@ -5417,7 +5417,7 @@ async def info_command(interaction: discord.Interaction):
             "> Retrouvez l'ensemble de nos serveurs et liens clés.\n\n"
 
             "🌐 **SERVEURS DISCORDS GLOBAL**\n"
-            "• [Orizon Community](https://discord.com/invite/5ZyN983mjk)\n\n"
+            "• [Orizon Community](https://discord.com/invite/orz)\n\n"
 
             "🎮 **SERVEUR DARKRP**\n"
             "• [Serveur Orizon - DarkRP](https://discord.gg/orz-darkrp)\n\n"
